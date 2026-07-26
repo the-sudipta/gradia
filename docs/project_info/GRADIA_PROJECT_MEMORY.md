@@ -626,6 +626,14 @@ No backlog item may be described as delivered until its evidence is added here.
 | Production web bundle | passed |
 | Browser visual QA | dynamic field/view guidance and Setup destination inspected; zero console warnings/errors |
 | Local Windows installer retry | blocked only because the currently running Gradia process locked the existing release executable; the user process was intentionally left untouched |
+| GitHub CI run 30212949814 | completed successfully |
+| Native release run 30212956251 | completed successfully; 4/4 jobs |
+| macOS Intel | `.dmg` and `.app.tar.gz` uploaded |
+| macOS Apple Silicon | `.dmg` and `.app.tar.gz` uploaded |
+| Linux x64 | `.AppImage` and `.deb` uploaded |
+| Windows x64 | NSIS `.exe` and MSI uploaded |
+| Release checksum manifest | all 8 uploaded packages downloaded and SHA-256 hashed |
 
-Native release evidence and published checksums must be recorded after every
-platform job completes; a draft release must not be promoted while any job fails.
+The published hash manifest is `docs/RELEASE_CHECKSUMS.txt`. Version 0.2.0
+remains explicit that Windows and macOS builds are not commercially signed and
+that macOS is ad-hoc signed rather than Apple-notarized.
