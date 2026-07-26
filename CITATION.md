@@ -3,7 +3,7 @@
 Use the repository’s [CITATION.cff](CITATION.cff) through GitHub’s **Cite this
 repository** control, or cite the software as:
 
-> Kumar, S. (2026). *Gradia: Smarter academic assessment* (Version 0.1.0)
+> Kumar, S. (2026). *Gradia: Smarter academic assessment* (Version 0.2.0)
 > [Computer software]. https://github.com/the-sudipta/gradia
 
 BibTeX:
@@ -13,7 +13,7 @@ BibTeX:
   author  = {Sudipta Kumar},
   title   = {Gradia: Smarter academic assessment},
   year    = {2026},
-  version = {0.1.0},
+  version = {0.2.0},
   url     = {https://github.com/the-sudipta/gradia}
 }
 ```

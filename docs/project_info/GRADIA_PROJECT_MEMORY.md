@@ -496,6 +496,10 @@ Gradia is complete only when all applicable checks are green:
 - **2026-07-26:** The user-selected purple/mint Gradia mark was extracted to true transparency and integrated into the application shell, onboarding, favicon, ICO, ICNS, PNG, Windows Store, Android, and iOS assets.
 - **2026-07-26:** Packaged frontend paths changed from root-absolute to bundle-relative URLs; the logo is imported through Vite so standalone releases resolve the hashed asset correctly.
 - **2026-07-26:** Returning users can reopen onboarding through **Settings → Welcome & semester setup** without deleting or altering existing academic data.
+- **2026-07-26:** Focused entry student lists became selected-student-aware roster windows, so advancing beyond the twelfth visible record also advances the left panel.
+- **2026-07-26:** Assessment field types and gradebook views require in-product, context-sensitive explanations and concrete examples rather than undocumented labels.
+- **2026-07-26:** Setup must show the active Semester → Course → Section destination because the left-panel academic context governs where new courses, sections, rosters, and records are written.
+- **2026-07-26:** Version 0.2.0 release automation targets native Windows x64, Linux x64, macOS Apple Silicon, and macOS Intel packages; unsigned/unnotarized status must remain explicit.
 
 ---
 
@@ -585,3 +589,43 @@ Version 0.1.0 is a usable local teacher workflow, but the broader vision in Sect
 - clean-profile/VM installer test and large 40×20 interactive performance exercise.
 
 No backlog item may be described as delivered until its evidence is added here.
+
+---
+
+## 16. Version 0.2.0 Implementation Record
+
+### Delivered usability corrections
+
+- the empty-search focused-entry list displays the 12-student roster window that contains the selected student;
+- advancing from enrollment position 12 to 13 moves the left list from positions 1–12 to 13–24;
+- wrapping to the first enrollment returns the list to the first window;
+- Score, Calculated, Attendance, Bonus, Penalty, Text, and Note display dynamic behavioral guidance and examples;
+- No specific view, Midterm, Final, Semester Result, Attendance, and future custom views display matching guidance;
+- Text and Note fields accept and persist written values in grid and form entry;
+- visual calculations expose subtraction so non-negative Penalty inputs can reduce a result;
+- Setup displays the current Semester → Course → Section destination and explains the scope of each creation action;
+- the public README mirrors the academic-context, field-type, and gradebook-view guidance.
+
+### Validation and release engineering
+
+- Rust rejects unknown field types at the command boundary;
+- Calculated fields require a recipe and non-calculated fields reject recipe JSON;
+- macOS uses the Tauri-recommended ad-hoc signing identity until commercial signing and notarization are configured;
+- the GitHub release matrix builds on native Windows, Ubuntu, and macOS runners, including separate Apple Silicon and Intel targets.
+
+### Local verification evidence — 2026-07-26
+
+| Check | Observed result |
+|---|---|
+| Frontend unit tests | 8 passed, 0 failed |
+| Focus boundary fixture | 34 enrollments; windows 1–12, 13–24, and 25–34 reconciled |
+| Guidance fixture | all seven field types plus starter/no-specific views contain behavior and examples |
+| Rust unit/integration tests | 10 passed, 0 failed |
+| Rust formatting | passed |
+| Clippy with warnings denied | passed |
+| Production web bundle | passed |
+| Browser visual QA | dynamic field/view guidance and Setup destination inspected; zero console warnings/errors |
+| Local Windows installer retry | blocked only because the currently running Gradia process locked the existing release executable; the user process was intentionally left untouched |
+
+Native release evidence and published checksums must be recorded after every
+platform job completes; a draft release must not be promoted while any job fails.

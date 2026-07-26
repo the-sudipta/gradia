@@ -47,6 +47,109 @@ export function rankStudents(students, query) {
     .map(({ student }) => student);
 }
 
+export function studentWindow(students, selectedEnrollmentId, size = 12) {
+  if (!students.length) return [];
+  const windowSize = Math.max(1, Math.floor(Number(size)) || 12);
+  const selectedIndex = students.findIndex(
+    (student) => student.enrollment_id === Number(selectedEnrollmentId)
+  );
+  const start = selectedIndex < 0 ? 0 : Math.floor(selectedIndex / windowSize) * windowSize;
+  return students.slice(start, start + windowSize);
+}
+
+export const ASSESSMENT_TYPE_GUIDES = Object.freeze({
+  score: {
+    label: "Score",
+    behavior: "A numeric mark entered by the teacher. Gradia validates it against the maximum mark.",
+    example: "Quiz 1: 8 out of 10."
+  },
+  calculated: {
+    label: "Calculated",
+    behavior:
+      "A read-only numeric result produced from existing fields. If a required source mark is missing, the result remains missing.",
+    example: "Midterm Total = OBE + Viva + Midterm Exam, or Best 3 of 4 quizzes."
+  },
+  attendance: {
+    label: "Attendance",
+    behavior:
+      "A numeric assessment column intended for an attendance-derived mark. Attendance sessions remain managed separately on the Attendance screen.",
+    example: "Attendance Mark: 9 out of 10 after applying your institution's attendance policy."
+  },
+  bonus: {
+    label: "Bonus",
+    behavior:
+      "A non-negative extra-credit amount. Include it as a source in a calculated field when it should increase a result.",
+    example: "Participation Bonus: 2 points, then Semester Total includes that bonus."
+  },
+  penalty: {
+    label: "Penalty",
+    behavior:
+      "A non-negative deduction amount. Include it in a calculated field using subtraction when it should reduce a result.",
+    example: "Late Submission Penalty: 3 points; Adjusted Project = Project − Penalty."
+  },
+  text: {
+    label: "Text",
+    behavior:
+      "A short written value rather than a number. It is stored per student and is not used in numeric calculations.",
+    example: "Presentation outcome: Satisfactory."
+  },
+  note: {
+    label: "Note",
+    behavior:
+      "Free-form student-specific context. It documents an exception or decision without changing the mark.",
+    example: "Makeup assessment approved for 12 August."
+  }
+});
+
+export function assessmentTypeGuide(type) {
+  return ASSESSMENT_TYPE_GUIDES[type] ?? ASSESSMENT_TYPE_GUIDES.score;
+}
+
+const GRADEBOOK_VIEW_GUIDES = Object.freeze({
+  midterm: {
+    label: "Midterm",
+    behavior: "Groups fields used during the midterm part of the course.",
+    example: "Midterm OBE, Midterm Exam, and Midterm Total."
+  },
+  final: {
+    label: "Final",
+    behavior: "Groups fields used during the final part of the course.",
+    example: "Final OBE, Final Exam, Viva, and Final Total."
+  },
+  "semester result": {
+    label: "Semester Result",
+    behavior: "Groups fields that combine or summarize the complete course result.",
+    example: "Semester Total = 40% Midterm + 60% Final."
+  },
+  attendance: {
+    label: "Attendance",
+    behavior:
+      "Groups attendance-related assessment fields. The Attendance screen still holds the individual class-session records.",
+    example: "Attendance Percentage and converted Attendance Mark."
+  }
+});
+
+export function gradebookViewGuide(name = "", term = "") {
+  const normalized = String(name).trim().toLowerCase();
+  if (!normalized) {
+    return {
+      label: "No specific view",
+      behavior:
+        "Leaves the field outside a named grouping. Its Term still controls whether it appears under Midterm, Final, Semester, or All fields.",
+      example: "Use this for a general reference field that does not belong to one named view."
+    };
+  }
+  return (
+    GRADEBOOK_VIEW_GUIDES[normalized] ?? {
+      label: String(name).trim(),
+      behavior: `Groups the field in the “${String(name).trim()}” view${
+        term ? ` for the ${String(term).trim()} term` : ""
+      }. The view organizes fields; it does not change their values or calculation rules.`,
+      example: `Use it when this field belongs with the other “${String(name).trim()}” columns.`
+    }
+  );
+}
+
 export function entryKey(enrollmentId, fieldId) {
   return `${enrollmentId}:${fieldId}`;
 }

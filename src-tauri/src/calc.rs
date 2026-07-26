@@ -424,7 +424,7 @@ pub fn descriptive_statistics(values: &[f64]) -> (f64, f64, f64, f64, f64) {
     sorted.sort_by(f64::total_cmp);
     let count = sorted.len() as f64;
     let mean = sorted.iter().sum::<f64>() / count;
-    let median = if sorted.len() % 2 == 0 {
+    let median = if sorted.len().is_multiple_of(2) {
         (sorted[sorted.len() / 2 - 1] + sorted[sorted.len() / 2]) / 2.0
     } else {
         sorted[sorted.len() / 2]

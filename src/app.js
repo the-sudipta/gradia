@@ -2,15 +2,18 @@ import { call, chooseOpenFile, chooseSaveFile, isDesktop } from "./api.js";
 import { barChart, distributionChart, donutChart } from "./charts.js";
 import gradiaLogoUrl from "./assets/gradia-logo-transparent.png";
 import {
+  assessmentTypeGuide,
   entryKey,
   escapeHtml,
   formatNumber,
+  gradebookViewGuide,
   gradeHeatColor,
   initials,
   insightSentences,
   optimisticGradeUpdate,
   percentage,
   rankStudents,
+  studentWindow,
   validateMark
 } from "./core.js";
 
@@ -422,28 +425,29 @@ function renderGradebook() {
                         <td class="sticky id-col">${escapeHtml(student.student_identifier)}</td>
                         <td class="sticky name-col"><div class="student-name">${escapeHtml(student.name)}<small>${escapeHtml(student.status)}</small></div></td>
                         ${fields
-                          .map((field) => {
-                            const entry = map.get(entryKey(student.enrollment_id, field.id));
-                            if (field.field_type === "calculated" || field.field_type === "grade") {
-                              const value = computedValue(student.enrollment_id, field.id);
-                              return `<td style="text-align:center"><span class="state-pill ${value === null ? "muted" : ""}">${value === null ? "Missing inputs" : formatNumber(value)}</span></td>`;
-                            }
-                            return `<td style="text-align:center">
-                              <input
-                                class="mark-input"
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                ${field.max_mark ? `max="${field.max_mark}"` : ""}
-                                value="${entry?.state === "value" && entry.numeric_value !== null ? entry.numeric_value : ""}"
-                                placeholder="—"
-                                data-grade-cell
-                                data-enrollment="${student.enrollment_id}"
-                                data-field="${field.id}"
-                                data-maximum="${field.max_mark ?? ""}"
-                                aria-label="${escapeHtml(field.label)} for ${escapeHtml(student.name)}"
-                              />
-                            </td>`;
+                           .map((field) => {
+                             const entry = map.get(entryKey(student.enrollment_id, field.id));
+                             if (field.field_type === "calculated" || field.field_type === "grade") {
+                               const value = computedValue(student.enrollment_id, field.id);
+                               return `<td style="text-align:center"><span class="state-pill ${value === null ? "muted" : ""}">${value === null ? "Missing inputs" : formatNumber(value)}</span></td>`;
+                             }
+                             const textual = ["text", "note"].includes(field.field_type);
+                             return `<td style="text-align:center">
+                               <input
+                                 class="mark-input"
+                                 type="${textual ? "text" : "number"}"
+                                 ${textual ? "" : 'step="0.01" min="0"'}
+                                 ${!textual && field.max_mark ? `max="${field.max_mark}"` : ""}
+                                 value="${escapeHtml(entry?.state === "value" ? textual ? entry.text_value ?? "" : entry.numeric_value ?? "" : "")}"
+                                 placeholder="—"
+                                 data-grade-cell
+                                 data-enrollment="${student.enrollment_id}"
+                                 data-field="${field.id}"
+                                 data-maximum="${textual ? "" : field.max_mark ?? ""}"
+                                 data-value-kind="${textual ? "text" : "number"}"
+                                 aria-label="${escapeHtml(field.label)} for ${escapeHtml(student.name)}"
+                               />
+                             </td>`;
                           })
                           .join("")}
                       </tr>`
@@ -463,12 +467,17 @@ function quickSelectedStudent() {
 
 function renderQuickEntry() {
   if (!state.gradebook) return emptyInline("Select a section", "Quick entry needs an active section and roster.");
-  const ranked = rankStudents(state.gradebook.enrollments, state.quickQuery);
-  const selected = quickSelectedStudent() ?? ranked[0] ?? null;
-  if (selected && !state.quickStudentId) state.quickStudentId = selected.enrollment_id;
+  const searchResults = rankStudents(state.gradebook.enrollments, state.quickQuery);
+  const selected = quickSelectedStudent() ?? searchResults[0] ?? state.gradebook.enrollments[0] ?? null;
+  if (selected && selected.enrollment_id !== Number(state.quickStudentId)) {
+    state.quickStudentId = selected.enrollment_id;
+  }
+  const ranked = state.quickQuery.trim()
+    ? searchResults
+    : studentWindow(state.gradebook.enrollments, state.quickStudentId);
   const map = entriesMap();
   const fields = state.gradebook.fields.filter(
-    (field) => !field.archived && !["calculated", "grade", "note"].includes(field.field_type)
+    (field) => !field.archived && !["calculated", "grade"].includes(field.field_type)
   );
   return `
     <div class="page">
@@ -500,9 +509,10 @@ function renderQuickEntry() {
                      ${fields
                        .map((field) => {
                          const entry = map.get(entryKey(selected.enrollment_id, field.id));
+                         const textual = ["text", "note"].includes(field.field_type);
                          return `<div class="form-group">
-                           <label>${escapeHtml(field.label)} <small>${field.max_mark ? `Max ${formatNumber(field.max_mark)}` : field.term}</small></label>
-                           <input class="form-control" type="number" step="0.01" min="0" ${field.max_mark ? `max="${field.max_mark}"` : ""} name="field-${field.id}" value="${entry?.state === "value" && entry.numeric_value !== null ? entry.numeric_value : ""}" placeholder="Missing" />
+                           <label>${escapeHtml(field.label)} <small>${textual ? field.field_type : field.max_mark ? `Max ${formatNumber(field.max_mark)}` : field.term}</small></label>
+                           <input class="form-control" type="${textual ? "text" : "number"}" ${textual ? "" : `step="0.01" min="0" ${field.max_mark ? `max="${field.max_mark}"` : ""}`} name="field-${field.id}" value="${escapeHtml(entry?.state === "value" ? textual ? entry.text_value ?? "" : entry.numeric_value ?? "" : "")}" placeholder="Missing" />
                          </div>`;
                        })
                        .join("")}
@@ -725,11 +735,28 @@ function renderExcel() {
 
 function renderSetup() {
   const policies = state.bootstrap.policies;
+  const semester = activeSemester();
+  const course = activeCourse();
+  const section = activeSection();
   return `
     <div class="page">
       <div class="page-header">
         <div><div class="page-kicker">Workspace builder</div><h2>Shape Gradia around the way you teach.</h2><p>Semesters, courses, sections, rosters, assessment fields, and policies remain configurable rather than institution-specific.</p></div>
       </div>
+      <section class="setup-context-guide" aria-label="Current setup destination">
+        <div>
+          <span class="context-guide-kicker">Before you add anything</span>
+          <strong>Select its destination in Academic context</strong>
+          <p>The left-panel selectors are active: a course is added to the selected semester, a section to the selected course, and a student to the selected section.</p>
+        </div>
+        <div class="context-guide-path">
+          <span>${escapeHtml(semester ? `${semester.season} ${semester.session}` : "Select semester")}</span>
+          <b>›</b>
+          <span>${escapeHtml(course ? `${course.code} · ${course.name}` : "Select course")}</span>
+          <b>›</b>
+          <span>${escapeHtml(section ? `Section ${section.label}` : "Select section")}</span>
+        </div>
+      </section>
       <div class="setup-grid">
         <section class="setup-card"><h3>New semester</h3><p>Store season and session separately for reliable institutional filenames.</p>
           <form id="semester-form"><div class="inline-fields"><div class="form-group"><label>Season</label><input class="form-control" name="season" placeholder="Fall" required /></div><div class="form-group"><label>Session</label><input class="form-control" name="session" placeholder="2025-2026" required /></div></div><button class="button primary" type="submit">Create & activate</button></form>
@@ -765,7 +792,7 @@ function renderSettings() {
         <section class="setup-card"><h3>Restore backup</h3><p>Gradia verifies the format, checksum, SQLite integrity, and migrations before replacing local data.</p><button class="button danger" id="restore-backup" style="margin-top:16px">Restore backup</button></section>
         <section class="setup-card"><h3>Runtime posture</h3><p>Normal operation uses the local SQLite database and bundled application assets. Telemetry and update checks are disabled.</p><div class="policy-bands"><div class="policy-band"><span class="band-color" style="--band-color:#62f0bd"></span><strong>Local</strong><span>Database</span><span class="tag">gradia.db</span></div><div class="policy-band"><span class="band-color" style="--band-color:#62f0bd"></span><strong>Zero</strong><span>Runtime network calls</span><span class="tag">Required</span></div></div></section>
         <section class="setup-card"><h3>Welcome & semester setup</h3><p>Reopen the guided welcome screen at any time. Existing semesters, courses, rosters, marks, and attendance remain untouched.</p><button class="button primary" id="open-welcome" style="margin-top:16px">Open welcome & setup</button></section>
-        <section class="setup-card"><h3>About</h3><p><strong>Gradia</strong><br />Smarter academic assessment.<br /><br />Version 0.1.0 · Tauri desktop architecture.</p></section>
+        <section class="setup-card"><h3>About</h3><p><strong>Gradia</strong><br />Smarter academic assessment.<br /><br />Version 0.2.0 · Tauri desktop architecture.</p></section>
       </div>
     </div>`;
 }
@@ -813,17 +840,28 @@ function modal(content) {
   return backdrop;
 }
 
+function guideCardMarkup(guide) {
+  return `
+    <strong>${escapeHtml(guide.label)}</strong>
+    <p>${escapeHtml(guide.behavior)}</p>
+    <small><span>Example</span>${escapeHtml(guide.example)}</small>`;
+}
+
 function openFieldModal() {
   if (!state.courseId) return toast("Select a course first.", "error");
   const views = state.gradebook?.views ?? [];
   const sourceFields = (state.gradebook?.fields ?? []).filter((field) => !field.archived);
+  const initialTypeGuide = assessmentTypeGuide("score");
+  const initialViewGuide = gradebookViewGuide();
   const box = modal(`
     <h3>Add assessment field</h3><p>Create a validated raw column or a reusable calculation. Missing source marks remain missing.</p>
     <form id="field-form">
       <div class="inline-fields"><div class="form-group"><label>Label</label><input class="form-control" name="label" placeholder="OBE Assessment" required /></div><div class="form-group"><label>Stable key</label><input class="form-control" name="key" placeholder="obe_assessment" required /></div></div>
-      <div class="inline-fields"><div class="form-group"><label>Term</label><select class="form-control" name="term"><option value="mid">Midterm</option><option value="final">Final</option><option value="semester">Semester</option><option value="custom">Custom</option></select></div><div class="form-group"><label>Type</label><select class="form-control" name="type"><option value="score">Score</option><option value="calculated">Calculated</option><option value="attendance">Attendance</option><option value="bonus">Bonus</option><option value="penalty">Penalty</option><option value="text">Text</option><option value="note">Note</option></select></div></div>
+      <div class="inline-fields"><div class="form-group"><label>Term</label><select class="form-control" name="term"><option value="mid">Midterm</option><option value="final">Final</option><option value="semester">Semester</option><option value="custom">Custom</option></select></div><div class="form-group"><label>Type</label><select class="form-control" name="type"><option value="score">Score — entered mark</option><option value="calculated">Calculated — formula result</option><option value="attendance">Attendance — converted mark</option><option value="bonus">Bonus — extra credit</option><option value="penalty">Penalty — deduction amount</option><option value="text">Text — short written value</option><option value="note">Note — student context</option></select></div></div>
+      <div class="guide-card" id="assessment-type-guide" aria-live="polite">${guideCardMarkup(initialTypeGuide)}</div>
       <div class="inline-fields"><div class="form-group"><label>Maximum mark</label><input class="form-control" name="maximum" type="number" min="0.01" step="0.01" /></div><div class="form-group"><label>Contribution</label><input class="form-control" name="contribution" type="number" min="0" step="0.01" /></div></div>
       <div class="form-group"><label>Gradebook view</label><select class="form-control" name="view"><option value="">No specific view</option>${views.map((view) => `<option value="${view.id}">${escapeHtml(view.name)}</option>`).join("")}</select></div>
+      <div class="guide-card secondary" id="gradebook-view-guide" aria-live="polite">${guideCardMarkup(initialViewGuide)}</div>
       <div class="calculation-builder" id="calculation-builder" hidden>
         <div class="builder-heading"><strong>Calculation recipe</strong><span>Uses existing fields</span></div>
         <div class="form-group"><label>Operation</label><select class="form-control" name="operation">
@@ -831,6 +869,7 @@ function openFieldModal() {
           <option value="maximum">Best single field</option><option value="best_n">Best N (sum)</option>
           <option value="drop_lowest">Drop lowest (sum)</option><option value="multiply">Multiply one field</option>
           <option value="scale">Convert mark from one maximum to another</option><option value="weighted_sum">Weighted combination</option>
+          <option value="subtract">Subtract later fields from the first</option>
         </select></div>
         <div class="source-field-list">
           ${
@@ -852,11 +891,18 @@ function openFieldModal() {
     </form>`);
   const fieldForm = box.querySelector("#field-form");
   const fieldType = fieldForm.elements.type;
+  const viewSelect = fieldForm.elements.view;
   const operation = fieldForm.elements.operation;
   const builder = box.querySelector("#calculation-builder");
   const syncBuilder = () => {
     const calculated = fieldType.value === "calculated";
+    const textual = ["text", "note"].includes(fieldType.value);
     builder.hidden = !calculated;
+    fieldForm.elements.maximum.disabled = textual;
+    fieldForm.elements.contribution.disabled = textual;
+    box.querySelector("#assessment-type-guide").innerHTML = guideCardMarkup(
+      assessmentTypeGuide(fieldType.value)
+    );
     const op = operation.value;
     box.querySelectorAll("[data-param]").forEach((element) => {
       const parameter = element.dataset.param;
@@ -870,9 +916,17 @@ function openFieldModal() {
         );
     });
   };
+  const syncViewGuide = () => {
+    const selectedView = views.find((view) => view.id === Number(viewSelect.value));
+    box.querySelector("#gradebook-view-guide").innerHTML = guideCardMarkup(
+      gradebookViewGuide(selectedView?.name, selectedView?.term)
+    );
+  };
   fieldType.addEventListener("change", syncBuilder);
+  viewSelect.addEventListener("change", syncViewGuide);
   operation.addEventListener("change", syncBuilder);
   syncBuilder();
+  syncViewGuide();
   fieldForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
@@ -905,6 +959,12 @@ function openFieldModal() {
             ? rawWeights.map((value) => value / 100)
             : rawWeights;
           rule = { op, items: inputs.map((input, index) => ({ input, weight: normalized[index] })) };
+        }
+        if (op === "subtract") {
+          if (inputs.length < 2) throw new Error("Subtraction requires at least two source fields.");
+          rule = inputs
+            .slice(1)
+            .reduce((left, right) => ({ op: "subtract", left, right }), inputs[0]);
         }
         ruleJson = JSON.stringify(rule);
       }
@@ -1080,22 +1140,29 @@ function openAttendanceModal() {
 }
 
 async function saveGradeCell(input) {
+  const textual = input.dataset.valueKind === "text";
   const maximum = input.dataset.maximum === "" ? null : Number(input.dataset.maximum);
-  const validation = validateMark(input.value, maximum);
-  if (!validation.valid) {
-    input.classList.add("invalid");
-    toast(validation.message, "error");
-    return;
+  let numeric = null;
+  let textValue = null;
+  if (textual) {
+    textValue = input.value.trim() ? input.value : null;
+  } else {
+    const validation = validateMark(input.value, maximum);
+    if (!validation.valid) {
+      input.classList.add("invalid");
+      toast(validation.message, "error");
+      return;
+    }
+    numeric = validation.value;
   }
-  const numeric = validation.value;
   input.classList.remove("invalid");
   input.classList.add("pending");
   const update = {
     field_id: Number(input.dataset.field),
     enrollment_id: Number(input.dataset.enrollment),
     numeric_value: numeric,
-    text_value: null,
-    state: numeric === null ? "missing" : "value",
+    text_value: textValue,
+    state: numeric === null && textValue === null ? "missing" : "value",
     note: null
   };
   const optimistic = optimisticGradeUpdate(entriesMap(), update);
@@ -1105,7 +1172,7 @@ async function saveGradeCell(input) {
       fieldId: update.field_id,
       enrollmentId: update.enrollment_id,
       numericValue: update.numeric_value,
-      textValue: null,
+      textValue: update.text_value,
       entryState: update.state,
       note: null
     });
@@ -1162,12 +1229,14 @@ async function handleForm(event) {
       if (!student) return;
       const note = data.get("entry-note") || null;
       const fields = state.gradebook.fields.filter(
-        (field) => !field.archived && !["calculated", "grade", "note"].includes(field.field_type)
+        (field) => !field.archived && !["calculated", "grade"].includes(field.field_type)
       );
       for (const field of fields) {
         const raw = data.get(`field-${field.id}`);
         if (raw === null) continue;
-        const numeric = raw === "" ? null : Number(raw);
+        const textual = ["text", "note"].includes(field.field_type);
+        const numeric = textual || raw === "" ? null : Number(raw);
+        const textValue = textual && String(raw).trim() ? String(raw) : null;
         if (numeric !== null && field.max_mark !== null && numeric > field.max_mark) {
           throw new Error(`${field.label} cannot exceed ${field.max_mark}.`);
         }
@@ -1175,8 +1244,8 @@ async function handleForm(event) {
           fieldId: field.id,
           enrollmentId: student.enrollment_id,
           numericValue: numeric,
-          textValue: null,
-          entryState: numeric === null ? "missing" : "value",
+          textValue,
+          entryState: numeric === null && textValue === null ? "missing" : "value",
           note
         });
         state.gradebook.entries = state.gradebook.entries.filter(

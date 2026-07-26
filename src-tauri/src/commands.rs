@@ -742,6 +742,25 @@ pub fn create_assessment_field(
     if !["mid", "final", "semester", "custom"].contains(&term.as_str()) {
         return Err("Invalid term.".into());
     }
+    if ![
+        "score",
+        "calculated",
+        "attendance",
+        "bonus",
+        "penalty",
+        "text",
+        "note",
+    ]
+    .contains(&field_type.as_str())
+    {
+        return Err("Invalid assessment field type.".into());
+    }
+    if field_type == "calculated" && rule_json.is_none() {
+        return Err("A calculated field needs a calculation recipe.".into());
+    }
+    if field_type != "calculated" && rule_json.is_some() {
+        return Err("Only calculated fields can contain a calculation recipe.".into());
+    }
     if let Some(maximum) = max_mark {
         if maximum <= 0.0 || !maximum.is_finite() {
             return Err("Maximum mark must be a positive number.".into());
@@ -1479,11 +1498,13 @@ pub fn set_attendance_status(
     })
 }
 
+type AttendanceData = (Vec<AttendanceSession>, HashMap<i64, Vec<AttendanceRecord>>);
+
 #[tauri::command]
 pub fn get_attendance(
     state: State<'_, DbState>,
     section_id: i64,
-) -> Result<(Vec<AttendanceSession>, HashMap<i64, Vec<AttendanceRecord>>), String> {
+) -> Result<AttendanceData, String> {
     let connection = connection(&state)?;
     let mut statement = connection
         .prepare(
@@ -1586,19 +1607,17 @@ pub fn get_pipeline(
         .into_iter()
         .filter(|field| !field.archived)
         .map(|field| {
-            pipeline_by_key(&connection, field.id, section_id).or_else(|_| {
-                Ok(PipelineStatus {
-                    field_id: field.id,
-                    section_id,
-                    evaluated: false,
-                    evaluated_at: None,
-                    marks_recorded: false,
-                    marks_recorded_at: None,
-                    portal_uploaded: false,
-                    portal_uploaded_at: None,
-                    pending_note: None,
-                })
-            })
+            pipeline_by_key(&connection, field.id, section_id).or(Ok(PipelineStatus {
+                field_id: field.id,
+                section_id,
+                evaluated: false,
+                evaluated_at: None,
+                marks_recorded: false,
+                marks_recorded_at: None,
+                portal_uploaded: false,
+                portal_uploaded_at: None,
+                pending_note: None,
+            }))
         })
         .collect()
 }

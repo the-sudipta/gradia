@@ -1,46 +1,53 @@
-# Gradia 0.1.0
+# Gradia 0.2.0
 
-Gradia’s first public release turns the complete core teacher workflow into a
-private, local-first Windows desktop application.
+Gradia 0.2.0 makes assessment setup self-explanatory, keeps focused entry
+synchronized with the full roster, and introduces native packages for Windows,
+macOS, and Linux.
 
 ## Highlights
 
-- Build semesters, courses, sections, rosters, policies, and assessment structures.
-- Record marks in a flexible gradebook or dynamic-search form.
-- Take attendance by marking everyone Present and changing only exceptions.
-- Configure institute-independent grade ranges and calculation/conversion rules.
-- Explore distributions, grade frequencies, heatmaps, boundary cases, and
-  descriptive observations.
-- Track evaluation, recording, and portal-upload progress independently.
-- Fill official institutional Excel templates by exact Student ID while preserving
-  non-target workbook content and never overwriting the source.
-- Finalize auditable result snapshots and save checksummed portable backups.
-- Launch the Windows application without an accompanying terminal.
+- **Focused entry follows the student.** Moving from student 12 to 13 now advances
+  the left finder to the next roster window; the selected student never disappears
+  from the visible list.
+- **Every assessment type explains itself.** Score, Calculated, Attendance, Bonus,
+  Penalty, Text, and Note include behavior guidance and a concrete example.
+- **Every starter gradebook view explains itself.** The dialog clarifies No
+  specific view, Midterm, Final, Semester Result, and Attendance, including the
+  difference between a Term and a View.
+- **Setup shows the active destination.** A visible Semester → Course → Section
+  path makes it clear where courses, sections, and students will be added.
+- **Text means text.** Text and Note fields now accept and persist written values
+  in the main gradebook and focused-entry form.
+- **Penalties can be deducted.** The visual calculation builder now exposes
+  subtraction using the first selected source minus the later sources.
 
-## Windows downloads
+## Downloads
 
-- `Gradia_0.1.0_x64-setup.exe` — recommended interactive installer.
-- `Gradia_0.1.0_x64_en-US.msi` — Windows Installer package for managed deployment.
-- `gradia.exe` — standalone application binary.
-- `RELEASE_CHECKSUMS.txt` — SHA-256 verification values.
+- **Windows x64:** NSIS setup `.exe` or Windows Installer `.msi`.
+- **macOS Apple Silicon:** `aarch64` `.dmg`.
+- **macOS Intel:** `x64` `.dmg`.
+- **Linux x64:** portable `.AppImage` or Debian/Ubuntu `.deb`.
+- **Integrity:** `RELEASE_CHECKSUMS.txt` lists SHA-256 values for every downloadable
+  package.
 
-Windows may display an unfamiliar-publisher warning because version 0.1.0 is not
-code-signed. Verify the SHA-256 checksum before installation.
+These packages are built on native GitHub-hosted operating-system runners. They
+are not commercially code-signed or Apple-notarized. macOS builds use an ad-hoc
+signature, but macOS may still require approval under **System Settings → Privacy
+& Security**. Windows may show an unfamiliar-publisher warning.
 
-## Privacy
+## Privacy and compatibility
 
-Normal operation is account-free and local. The release contains fictional demo
-records only. Store `gradia.db`, exported workbooks, and `.gradia` backups as
-sensitive academic data.
+All editions use the same local SQLite model and `.gradia` backup format. Normal
+operation remains account-free and makes no required runtime network requests.
+Back up `gradia.db` before moving between versions or computers.
 
 ## Verification
 
-- Frontend tests: 6 passed.
-- Rust tests: 10 passed.
-- Rust formatting check: passed.
-- Production frontend build: passed.
-- Native Windows release, MSI, and NSIS packaging: passed.
-- Repository publication audit: 0 errors and 0 warnings.
+- Frontend behavioral and rendering tests.
+- Rust unit, calculation, database, snapshot, backup, and Excel-fidelity tests.
+- Rust formatting and Clippy checks.
+- Production frontend build.
+- Native Windows, macOS Apple Silicon, macOS Intel, and Linux release builds.
 
 ## License
 
