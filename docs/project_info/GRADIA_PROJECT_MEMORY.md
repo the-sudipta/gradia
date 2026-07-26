@@ -4,11 +4,11 @@
 
 **Product name:** Gradia
 
-**Status:** Version 0.1.0 working Windows release built and verified; expansion backlog recorded below.
+**Status:** Version 0.2.1 release candidate implemented and locally verified; native GitHub publication pending.
 
 **Owner:** Master (AIUB CSE Instructor)
 
-**Last consolidated:** 2026-07-25
+**Last consolidated:** 2026-07-27
 **Authority:** This file supersedes every earlier pre-Gradia concept document whenever they conflict.
 
 ---
@@ -637,3 +637,92 @@ No backlog item may be described as delivered until its evidence is added here.
 The published hash manifest is `docs/RELEASE_CHECKSUMS.txt`. Version 0.2.0
 remains explicit that Windows and macOS builds are not commercially signed and
 that macOS is ad-hoc signed rather than Apple-notarized.
+
+---
+
+## 17. Version 0.2.1 Corrective Release Record
+
+### Root cause corrected
+
+Version 0.2.0 changed the focused-entry and guidance source, but its release
+uploaded only Windows installers and omitted a new standalone executable. A user
+who continued using the earlier standalone therefore continued running v0.1.0
+behavior. Version 0.2.1 treats the runnable release artifact—not only the source
+tree—as the acceptance boundary.
+
+The native release workflow now performs an explicit Windows `--no-bundle`
+build after installer production and uploads
+`Gradia_<version>_windows_x64_standalone.exe`. The application sidebar and About
+screen both show the current version so a user can confirm the running binary.
+
+### Focused entry and in-app guidance
+
+- the finder displays the active roster range, such as `Showing 13–24 of 40`;
+- every 12-student boundary through a 40-student roster is covered by a
+  regression fixture;
+- moving Next student clears the search, changes the roster window, and brings
+  the active student row into view;
+- assessment guidance is explicitly headed `What this type does`;
+- gradebook-view guidance is explicitly headed `What this view means`;
+- each guide continues to show behavior and a concrete example.
+
+### Complete database transfer
+
+- Settings exposes `Export database` and `Import database`;
+- one `.gradia` transfer contains the complete local SQLite workspace;
+- the custom container records the creating Gradia version;
+- import enforces the `.gradia` extension, validates the container format and
+  embedded SHA-256 digest, stages the database, runs SQLite integrity and
+  migrations, then replaces and reloads local state;
+- the UI states accurately that the transfer is integrity-protected but not
+  password encrypted.
+
+### Editability and deliberate deletion
+
+The records a user can create in the current UI now have matching edit paths:
+
+- semester season and academic session;
+- course code, name, official export name, accent color, and grading policy;
+- section label;
+- student ID, name, email, section enrollment status, and roster position;
+- gradebook view name and term;
+- assessment label, key, term, type, maximum, contribution, view, calculation
+  recipe, final-result role, and archived state;
+- grading policy identity, bands, grade points, results, colors, and default role;
+- attendance-session date, title, and note;
+- marks, written assessment values, attendance statuses, and pipeline stages
+  remain editable in place.
+
+Structural updates store old/new audit values. Reducing a maximum below an
+existing saved mark is rejected. Roster repositioning shifts neighboring records
+instead of creating ambiguous duplicate positions.
+
+Permanent deletion is available for semester, course, and section. The command
+boundary recomputes the cascade impact and requires the exact displayed
+confirmation phrase. The impact covers descendant courses, sections,
+enrollments, assessment fields, grade entries, attendance sessions, and result
+snapshots. Deleting an active semester activates another remaining semester.
+
+### Local verification evidence — 2026-07-27
+
+| Check | Observed result |
+|---|---|
+| User database inspection | read-only; SQLite integrity `ok`; reported B5 section contains 40 active enrollments |
+| Frontend unit tests | 8 passed, 0 failed |
+| 40-student focus fixture | windows 1–12, 13–24, 25–36, and 37–40 reconciled |
+| Rust unit/integration tests | 12 passed, 0 failed |
+| Transfer tamper test | wrong extension and digest mismatch rejected before replacement |
+| Destructive cascade test | exact confirmation required; enrollment, grade entry, attendance, and snapshot cascades verified |
+| Rust formatting | passed |
+| Clippy with warnings denied | passed |
+| Production web bundle | passed |
+| Browser visual QA | version, focus range, guidance, edit, transfer, and deletion controls inspected; zero warnings/errors |
+| Repository audit | 0 errors, 0 warnings |
+| Isolated Windows native build | NSIS, MSI, and separate unbundled standalone completed |
+| Standalone metadata | product/file version 0.2.1; PE GUI subsystem 2 |
+| Standalone launch | exact isolated executable launched and remained healthy; verification process then stopped |
+| Local standalone SHA-256 | `F8D533967DF0EAD77DFB0A5B3261826438B372D1F88DDBE56A532ECBEB2E42E6` |
+
+Cross-platform GitHub run IDs, final published asset names, and published hashes
+must be appended only after the draft release and independently downloaded
+standalone have been verified.

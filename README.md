@@ -20,7 +20,7 @@
     <img alt="JavaScript" src="https://img.shields.io/badge/JavaScript-ES_modules-F7DF1E?logo=javascript&logoColor=111111">
     <img alt="No account required" src="https://img.shields.io/badge/account-not_required-34D399">
     <img alt="No telemetry" src="https://img.shields.io/badge/telemetry-none-60A5FA">
-    <img alt="Version 0.2.0" src="https://img.shields.io/badge/version-0.2.0-A78BFA">
+    <img alt="Version 0.2.1" src="https://img.shields.io/badge/version-0.2.1-A78BFA">
   </p>
 
   <p>
@@ -42,7 +42,7 @@ Gradia is designed for teachers who have outgrown fragile, duplicated Excel work
   <tr>
     <td width="50%" valign="top">
       <h3>📚 Organize academic work</h3>
-      <p>Create semesters, courses, sections, rosters, and institute-specific grade policies. Student IDs remain authoritative text keys.</p>
+      <p>Create and later edit semesters, courses, colors, sections, rosters, views, assessment fields, attendance sessions, and institute-specific grade policies. Student IDs remain authoritative text keys.</p>
     </td>
     <td width="50%" valign="top">
       <h3>⌨️ Record marks quickly</h3>
@@ -76,7 +76,7 @@ Gradia is designed for teachers who have outgrown fragile, duplicated Excel work
     </td>
     <td width="50%" valign="top">
       <h3>🛡 Own and recover the data</h3>
-      <p>Work without an account or normal runtime network calls, then save and restore checksummed portable Gradia backups.</p>
+      <p>Work without an account or normal runtime network calls, then export and import the complete database through a checksummed portable <code>.gradia</code> file.</p>
     </td>
   </tr>
 </table>
@@ -149,6 +149,21 @@ The three selectors under **Academic context** in the left panel are the active 
 
 Changing a selector changes the active workspace. Before a write, verify both the left-panel path and the course/section breadcrumb at the top of the page.
 
+## Correct mistakes, edit records, or delete a structure
+
+Gradia does not make a teacher rebuild a course because of a typo. **Setup**
+provides edit controls for the selected semester, course, course color, section,
+student identity and enrollment, grading policy, and gradebook views. Assessment
+headers in **Gradebook** open the complete field/calculation editor, and an active
+attendance session has its own Edit session control. Existing marks and attendance
+statuses remain editable in place.
+
+Permanent deletion is available for a semester, course, or section. Gradia first
+shows the exact number of downstream courses, sections, enrollments, fields, grade
+entries, attendance sessions, and result snapshots that will be removed. The
+Delete button remains disabled until the displayed confirmation phrase is typed
+exactly. Export the database first if the records may be needed again.
+
 ## Assessment field types
 
 The **Type** tells Gradia what kind of value a column stores and how it behaves. The Add assessment dialog shows this explanation and an example immediately when the selection changes.
@@ -201,6 +216,8 @@ The **Type** tells Gradia what kind of value a column stores and how it behaves.
 - Student ID—not a possibly duplicated name—is the Excel matching key.
 - The source workbook is never overwritten.
 - Backups include a format manifest and SHA-256 integrity checksum.
+- Structural updates retain audit history, and destructive deletion requires an
+  impact preview plus exact typed confirmation.
 - Normal operation uses the local SQLite database and bundled assets only.
 
 ## Download
@@ -216,13 +233,13 @@ The **Type** tells Gradia what kind of value a column stores and how it behaves.
     </tr>
   </thead>
   <tbody>
-    <tr><td><strong>Windows x64</strong></td><td>NSIS <code>.exe</code> and <code>.msi</code></td><td>Use the setup <code>.exe</code> for normal installation or MSI for managed deployment. Gradia launches without a terminal window.</td></tr>
+    <tr><td><strong>Windows x64</strong></td><td>Standalone <code>.exe</code>, setup <code>.exe</code>, and <code>.msi</code></td><td>Use the standalone file without installation, the setup file for normal installation, or MSI for managed deployment. Gradia launches without a terminal window.</td></tr>
     <tr><td><strong>macOS</strong></td><td>Apple Silicon and Intel <code>.dmg</code></td><td>Choose <code>aarch64</code> for M1/M2/M3/M4-class Macs or <code>x64</code> for Intel Macs.</td></tr>
     <tr><td><strong>Linux x64</strong></td><td><code>.AppImage</code> and Debian <code>.deb</code></td><td>Use AppImage for a portable launch or <code>.deb</code> on Debian/Ubuntu-based distributions.</td></tr>
   </tbody>
 </table>
 
-Version 0.2.0 packages are built natively on GitHub-hosted Windows, macOS, and Ubuntu runners. They are not commercially code-signed or Apple-notarized yet. Windows/macOS may therefore show an unfamiliar-developer warning; verify the published SHA-256 checksums before opening a download.
+Version 0.2.1 packages are built natively on GitHub-hosted Windows, macOS, and Ubuntu runners. The Windows standalone executable still requires the Microsoft Edge WebView2 runtime included with supported Windows 10/11 systems. Packages are not commercially code-signed or Apple-notarized yet; Windows/macOS may therefore show an unfamiliar-developer warning. Verify the published SHA-256 checksums before opening a download.
 
 ## Quick start
 
@@ -234,7 +251,7 @@ Version 0.2.0 packages are built natively on GitHub-hosted Windows, macOS, and U
 6. Record marks through Gradebook or Quick entry.
 7. Use Attendance, Pipeline, and Insights during the semester.
 8. Export an official Excel template through Excel bridge.
-9. Save a Gradia backup from Settings.
+9. Export a complete `.gradia` database transfer from Settings for backup or use on another device.
 
 The onboarding page is always reachable from **Settings → Open welcome & semester setup**; existing semesters do not need to be deleted.
 
@@ -306,7 +323,7 @@ The implementation gates and verified baseline are documented in [GRADIA_RUNBOOK
 
 ## Project status
 
-Version `0.2.0` delivers the complete core teacher workflow on Windows, macOS, and Linux: setup, roster management, flexible marks, focused entry, attendance, grading policies, calculation rules, analytics, pipeline tracking, Excel export, audit snapshots, and backup/restore. Advanced cross-semester analytics, bulk undo tooling, encrypted backups, and commercially signed/notarized distribution remain on the [roadmap](ROADMAP.md).
+Version `0.2.1` delivers the complete core teacher workflow on Windows, macOS, and Linux: setup, roster management, flexible marks, focused entry, attendance, grading policies, calculation rules, analytics, pipeline tracking, Excel export, audit snapshots, and verified `.gradia` database transfer. Advanced cross-semester analytics, bulk undo tooling, password-encrypted transfers, and commercially signed/notarized distribution remain on the [roadmap](ROADMAP.md).
 
 ## Research and industrial PhD collaboration
 

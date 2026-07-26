@@ -34,7 +34,7 @@ const demo = {
     { id: 3, course_id: 1, view_id: 1, stable_key: "lab_task", label: "Lab Tasks", term: "mid", field_type: "score", max_mark: 30, contribution: 30, rule_json: null, is_final: false, order_index: 2, archived: false },
     { id: 4, course_id: 1, view_id: 1, stable_key: "mid_lab", label: "Mid-Lab", term: "mid", field_type: "score", max_mark: 25, contribution: 25, rule_json: null, is_final: false, order_index: 3, archived: false },
     { id: 5, course_id: 1, view_id: 1, stable_key: "viva", label: "Viva", term: "mid", field_type: "score", max_mark: 20, contribution: 20, rule_json: null, is_final: false, order_index: 4, archived: false },
-    { id: 6, course_id: 1, view_id: 1, stable_key: "mid_total", label: "Midterm Total", term: "mid", field_type: "calculated", max_mark: 100, contribution: 40, rule_json: null, is_final: true, order_index: 5, archived: false }
+    { id: 6, course_id: 1, view_id: 1, stable_key: "mid_total", label: "Midterm Total", term: "mid", field_type: "calculated", max_mark: 100, contribution: 40, rule_json: JSON.stringify({ op: "sum", inputs: [1, 2, 3, 4, 5].map((field_id) => ({ op: "field", field_id })) }), is_final: true, order_index: 5, archived: false }
   ],
   // Fictional records used only when the browser demo runs outside Tauri.
   students: [
@@ -273,10 +273,40 @@ async function demoCall(command, args) {
       demo.fields.push(field);
       return field;
     }
+    case "get_delete_impact": {
+      const label =
+        args.entityType === "semester"
+          ? "Fall 2025-2026"
+          : args.entityType === "course"
+            ? "CSC2211 · Data Structures Lab"
+            : "Section G";
+      return {
+        entity_type: args.entityType,
+        entity_id: args.entityId,
+        label,
+        confirmation: `DELETE ${label}`,
+        courses: args.entityType === "semester" ? 1 : args.entityType === "course" ? 1 : 0,
+        sections: args.entityType === "section" ? 1 : 2,
+        enrollments: 24,
+        assessment_fields: args.entityType === "section" ? 0 : 6,
+        grade_entries: 144,
+        attendance_sessions: 2,
+        result_snapshots: 0
+      };
+    }
     case "create_semester":
     case "create_course":
     case "create_section":
     case "add_student":
+    case "update_semester":
+    case "update_course":
+    case "update_section":
+    case "update_student":
+    case "update_gradebook_view":
+    case "create_gradebook_view":
+    case "update_assessment_field":
+    case "update_attendance_session":
+    case "delete_academic_entity":
       throw new Error("Setup mutations are available in the installed desktop app. Browser preview uses protected demonstration data.");
     case "preflight_excel":
     case "preview_excel_export":

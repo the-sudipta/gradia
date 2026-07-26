@@ -9,7 +9,7 @@ tests, documentation, and user-facing verification agree.
 - visible per-entry history and targeted undo;
 - attendance bulk actions and keyboard status shortcuts;
 - CSV roster import alongside XLSX;
-- field rename, reorder, archive, and reusable view management; and
+- field reordering and drag-based view organization; and
 - larger 40-student × 20-field interactive performance validation.
 
 ## 0.3 — Deeper academic intelligence
@@ -23,7 +23,7 @@ tests, documentation, and user-facing verification agree.
 
 ## 0.4 — Portability and institutional readiness
 
-- encrypted backup containers and managed key-recovery guidance;
+- password-encrypted database-transfer containers and managed key-recovery guidance;
 - signed/notarized macOS package and tested migration path;
 - packaged Linux releases across selected distributions;
 - accessibility audit and full keyboard/screen-reader remediation;

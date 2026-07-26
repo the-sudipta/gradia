@@ -220,6 +220,21 @@ pub struct BootstrapData {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct DeleteImpact {
+    pub entity_type: String,
+    pub entity_id: i64,
+    pub label: String,
+    pub confirmation: String,
+    pub courses: i64,
+    pub sections: i64,
+    pub enrollments: i64,
+    pub assessment_fields: i64,
+    pub grade_entries: i64,
+    pub attendance_sessions: i64,
+    pub result_snapshots: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct WorkbookSheet {
     pub name: String,
     pub path: String,

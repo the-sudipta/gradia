@@ -11,6 +11,7 @@ import {
   optimisticGradeUpdate,
   rankStudents,
   studentWindow,
+  studentWindowDetails,
   validateMark
 } from "../../src/core.js";
 
@@ -25,7 +26,7 @@ test("student finder ranks exact ID and prefixes before contains", () => {
 });
 
 test("focused entry follows the selected student through roster windows", () => {
-  const students = Array.from({ length: 34 }, (_, index) => ({
+  const students = Array.from({ length: 40 }, (_, index) => ({
     enrollment_id: index + 1,
     student_identifier: `25-${String(index + 1).padStart(5, "0")}-1`,
     name: `Student ${index + 1}`
@@ -39,9 +40,19 @@ test("focused entry follows the selected student through roster windows", () => 
     [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
   );
   assert.deepEqual(
-    studentWindow(students, 34).map((student) => student.enrollment_id),
-    [25, 26, 27, 28, 29, 30, 31, 32, 33, 34]
+    studentWindow(students, 25).map((student) => student.enrollment_id),
+    [25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36]
   );
+  assert.deepEqual(
+    studentWindow(students, 40).map((student) => student.enrollment_id),
+    [37, 38, 39, 40]
+  );
+  assert.deepEqual(studentWindowDetails(students, 13), {
+    students: students.slice(12, 24),
+    start: 13,
+    end: 24,
+    total: 40
+  });
   assert.equal(studentWindow(students, 1)[0].enrollment_id, 1);
 });
 

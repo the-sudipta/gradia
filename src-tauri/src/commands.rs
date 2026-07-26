@@ -24,6 +24,20 @@ fn clean_required(value: &str, label: &str) -> Result<String, String> {
     }
 }
 
+fn clean_color(value: &str) -> Result<String, String> {
+    let color = value.trim();
+    let valid = color.len() == 7
+        && color.starts_with('#')
+        && color[1..]
+            .chars()
+            .all(|character| character.is_ascii_hexdigit());
+    if valid {
+        Ok(color.to_ascii_lowercase())
+    } else {
+        Err("Color must use the hexadecimal format #RRGGBB.".into())
+    }
+}
+
 fn query_semesters(connection: &Connection) -> Result<Vec<Semester>, String> {
     let mut statement = connection
         .prepare(
@@ -210,6 +224,47 @@ pub fn set_active_semester(state: State<'_, DbState>, id: i64) -> Result<(), Str
 }
 
 #[tauri::command]
+pub fn update_semester(
+    state: State<'_, DbState>,
+    id: i64,
+    season: String,
+    session: String,
+) -> Result<Semester, String> {
+    let season = clean_required(&season, "Season")?;
+    let session = clean_required(&session, "Session")?;
+    let connection = connection(&state)?;
+    let old = connection
+        .query_row(
+            "SELECT json_object('season', season, 'session', session)
+             FROM semesters WHERE id = ?1",
+            params![id],
+            |row| row.get::<_, String>(0),
+        )
+        .optional()
+        .map_err(|e| e.to_string())?
+        .ok_or("Semester not found.")?;
+    connection
+        .execute(
+            "UPDATE semesters SET season = ?1, session = ?2 WHERE id = ?3",
+            params![season, session, id],
+        )
+        .map_err(|e| format!("Unable to update semester: {e}"))?;
+    db::audit(
+        &connection,
+        "semester",
+        Some(id),
+        "update",
+        Some(&old),
+        Some(&json!({"season": season, "session": session}).to_string()),
+        None,
+    )?;
+    query_semesters(&connection)?
+        .into_iter()
+        .find(|semester| semester.id == id)
+        .ok_or("Updated semester not found.".into())
+}
+
+#[tauri::command]
 pub fn create_course(
     state: State<'_, DbState>,
     semester_id: i64,
@@ -229,7 +284,7 @@ pub fn create_course(
     let color_hex = if color_hex.trim().is_empty() {
         "#8b5cf6".into()
     } else {
-        color_hex
+        clean_color(&color_hex)?
     };
     let mut connection = connection(&state)?;
     let transaction = connection.transaction().map_err(|e| e.to_string())?;
@@ -294,6 +349,83 @@ pub fn create_course(
 }
 
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
+pub fn update_course(
+    state: State<'_, DbState>,
+    id: i64,
+    code: String,
+    name: String,
+    export_name: String,
+    color_hex: String,
+    grading_policy_id: Option<i64>,
+) -> Result<Course, String> {
+    let code = clean_required(&code, "Course code")?;
+    let name = clean_required(&name, "Course name")?;
+    let export_name = if export_name.trim().is_empty() {
+        name.to_uppercase()
+    } else {
+        export_name.trim().to_string()
+    };
+    let color_hex = clean_color(&color_hex)?;
+    let connection = connection(&state)?;
+    let old = connection
+        .query_row(
+            "SELECT json_object(
+                'code', code, 'name', name, 'export_name', export_name,
+                'color_hex', color_hex, 'grading_policy_id', grading_policy_id
+             ) FROM courses WHERE id = ?1",
+            params![id],
+            |row| row.get::<_, String>(0),
+        )
+        .optional()
+        .map_err(|e| e.to_string())?
+        .ok_or("Course not found.")?;
+    if let Some(policy_id) = grading_policy_id {
+        let exists: i64 = connection
+            .query_row(
+                "SELECT EXISTS(SELECT 1 FROM grading_policies WHERE id = ?1)",
+                params![policy_id],
+                |row| row.get(0),
+            )
+            .map_err(|e| e.to_string())?;
+        if exists == 0 {
+            return Err("Grading policy not found.".into());
+        }
+    }
+    connection
+        .execute(
+            "UPDATE courses
+             SET code = ?1, name = ?2, export_name = ?3, color_hex = ?4,
+                 grading_policy_id = ?5
+             WHERE id = ?6",
+            params![code, name, export_name, color_hex, grading_policy_id, id],
+        )
+        .map_err(|e| format!("Unable to update course: {e}"))?;
+    db::audit(
+        &connection,
+        "course",
+        Some(id),
+        "update",
+        Some(&old),
+        Some(
+            &json!({
+                "code": code,
+                "name": name,
+                "export_name": export_name,
+                "color_hex": color_hex,
+                "grading_policy_id": grading_policy_id
+            })
+            .to_string(),
+        ),
+        None,
+    )?;
+    query_courses(&connection, None)?
+        .into_iter()
+        .find(|course| course.id == id)
+        .ok_or("Updated course not found.".into())
+}
+
+#[tauri::command]
 pub fn create_section(
     state: State<'_, DbState>,
     course_id: i64,
@@ -333,6 +465,44 @@ pub fn create_section(
         archived: false,
         created_at: timestamp,
     })
+}
+
+#[tauri::command]
+pub fn update_section(
+    state: State<'_, DbState>,
+    id: i64,
+    label: String,
+) -> Result<Section, String> {
+    let label = clean_required(&label, "Section label")?;
+    let connection = connection(&state)?;
+    let old = connection
+        .query_row(
+            "SELECT json_object('label', label) FROM sections WHERE id = ?1",
+            params![id],
+            |row| row.get::<_, String>(0),
+        )
+        .optional()
+        .map_err(|e| e.to_string())?
+        .ok_or("Section not found.")?;
+    connection
+        .execute(
+            "UPDATE sections SET label = ?1 WHERE id = ?2",
+            params![label, id],
+        )
+        .map_err(|e| format!("Unable to update section: {e}"))?;
+    db::audit(
+        &connection,
+        "section",
+        Some(id),
+        "update",
+        Some(&old),
+        Some(&json!({"label": label}).to_string()),
+        None,
+    )?;
+    query_sections(&connection, None)?
+        .into_iter()
+        .find(|section| section.id == id)
+        .ok_or("Updated section not found.".into())
 }
 
 #[tauri::command]
@@ -419,6 +589,119 @@ pub fn add_student(
     })
 }
 
+#[tauri::command]
+#[allow(clippy::too_many_arguments)]
+pub fn update_student(
+    state: State<'_, DbState>,
+    enrollment_id: i64,
+    student_identifier: String,
+    name: String,
+    email: Option<String>,
+    status: String,
+    roll_order: i64,
+) -> Result<EnrollmentRow, String> {
+    let student_identifier = clean_required(&student_identifier, "Student ID")?;
+    let name = clean_required(&name, "Student name")?;
+    if !["active", "withdrawn", "incomplete", "archived"].contains(&status.as_str()) {
+        return Err("Invalid enrollment status.".into());
+    }
+    if roll_order < 0 {
+        return Err("Roster position cannot be negative.".into());
+    }
+    let mut connection = connection(&state)?;
+    let transaction = connection.transaction().map_err(|e| e.to_string())?;
+    let (student_id, section_id, old_roll_order, old) = transaction
+        .query_row(
+            "SELECT s.id, e.section_id, e.roll_order,
+                    json_object(
+                      'student_identifier', s.student_identifier, 'name', s.name,
+                      'email', s.email, 'status', e.status, 'roll_order', e.roll_order
+                    )
+             FROM enrollments e JOIN students s ON s.id = e.student_id
+             WHERE e.id = ?1",
+            params![enrollment_id],
+            |row| {
+                Ok((
+                    row.get::<_, i64>(0)?,
+                    row.get::<_, i64>(1)?,
+                    row.get::<_, i64>(2)?,
+                    row.get::<_, String>(3)?,
+                ))
+            },
+        )
+        .optional()
+        .map_err(|e| e.to_string())?
+        .ok_or("Enrollment not found.")?;
+    let roster_size: i64 = transaction
+        .query_row(
+            "SELECT COUNT(*) FROM enrollments WHERE section_id = ?1",
+            params![section_id],
+            |row| row.get(0),
+        )
+        .map_err(|e| e.to_string())?;
+    if roll_order >= roster_size {
+        return Err(format!(
+            "Roster position must be between 1 and {roster_size}."
+        ));
+    }
+    let timestamp = db::now();
+    transaction
+        .execute(
+            "UPDATE students
+             SET student_identifier = ?1, name = ?2, email = ?3, updated_at = ?4
+             WHERE id = ?5",
+            params![student_identifier, name, email, timestamp, student_id],
+        )
+        .map_err(|e| format!("Unable to update student: {e}"))?;
+    if roll_order < old_roll_order {
+        transaction
+            .execute(
+                "UPDATE enrollments SET roll_order = roll_order + 1
+                 WHERE section_id = ?1 AND id <> ?2
+                   AND roll_order >= ?3 AND roll_order < ?4",
+                params![section_id, enrollment_id, roll_order, old_roll_order],
+            )
+            .map_err(|e| format!("Unable to reorder roster: {e}"))?;
+    } else if roll_order > old_roll_order {
+        transaction
+            .execute(
+                "UPDATE enrollments SET roll_order = roll_order - 1
+                 WHERE section_id = ?1 AND id <> ?2
+                   AND roll_order > ?3 AND roll_order <= ?4",
+                params![section_id, enrollment_id, old_roll_order, roll_order],
+            )
+            .map_err(|e| format!("Unable to reorder roster: {e}"))?;
+    }
+    transaction
+        .execute(
+            "UPDATE enrollments SET status = ?1, roll_order = ?2 WHERE id = ?3",
+            params![status, roll_order, enrollment_id],
+        )
+        .map_err(|e| format!("Unable to update enrollment: {e}"))?;
+    db::audit(
+        &transaction,
+        "enrollment",
+        Some(enrollment_id),
+        "update",
+        Some(&old),
+        Some(
+            &json!({
+                "student_identifier": student_identifier,
+                "name": name,
+                "email": email,
+                "status": status,
+                "roll_order": roll_order
+            })
+            .to_string(),
+        ),
+        None,
+    )?;
+    transaction.commit().map_err(|e| e.to_string())?;
+    roster(&connection, section_id)?
+        .into_iter()
+        .find(|student| student.enrollment_id == enrollment_id)
+        .ok_or("Updated enrollment not found.".into())
+}
 fn roster_import_preview(
     connection: &Connection,
     section_id: i64,
@@ -721,6 +1004,58 @@ pub fn create_gradebook_view(
 }
 
 #[tauri::command]
+pub fn update_gradebook_view(
+    state: State<'_, DbState>,
+    id: i64,
+    name: String,
+    term: String,
+) -> Result<GradebookView, String> {
+    let name = clean_required(&name, "View name")?;
+    if !["mid", "final", "semester", "custom"].contains(&term.as_str()) {
+        return Err("Term must be mid, final, semester, or custom.".into());
+    }
+    let connection = connection(&state)?;
+    let (course_id, order_index, old) = connection
+        .query_row(
+            "SELECT course_id, order_index, json_object('name', name, 'term', term)
+             FROM gradebook_views WHERE id = ?1",
+            params![id],
+            |row| {
+                Ok((
+                    row.get::<_, i64>(0)?,
+                    row.get::<_, i64>(1)?,
+                    row.get::<_, String>(2)?,
+                ))
+            },
+        )
+        .optional()
+        .map_err(|e| e.to_string())?
+        .ok_or("Gradebook view not found.")?;
+    connection
+        .execute(
+            "UPDATE gradebook_views SET name = ?1, term = ?2 WHERE id = ?3",
+            params![name, term, id],
+        )
+        .map_err(|e| format!("Unable to update gradebook view: {e}"))?;
+    db::audit(
+        &connection,
+        "gradebook_view",
+        Some(id),
+        "update",
+        Some(&old),
+        Some(&json!({"name": name, "term": term}).to_string()),
+        None,
+    )?;
+    Ok(GradebookView {
+        id,
+        course_id,
+        name,
+        term,
+        order_index,
+    })
+}
+
+#[tauri::command]
 #[allow(clippy::too_many_arguments)]
 pub fn create_assessment_field(
     state: State<'_, DbState>,
@@ -865,6 +1200,222 @@ pub fn create_assessment_field(
         is_final,
         order_index,
         archived: false,
+    })
+}
+
+#[tauri::command]
+#[allow(clippy::too_many_arguments)]
+pub fn update_assessment_field(
+    state: State<'_, DbState>,
+    id: i64,
+    view_id: Option<i64>,
+    stable_key: String,
+    label: String,
+    term: String,
+    field_type: String,
+    max_mark: Option<f64>,
+    contribution: Option<f64>,
+    rule_json: Option<String>,
+    is_final: bool,
+    archived: bool,
+) -> Result<AssessmentField, String> {
+    let stable_key = clean_required(&stable_key, "Stable key")?
+        .to_lowercase()
+        .replace(' ', "_");
+    let label = clean_required(&label, "Field label")?;
+    if !["mid", "final", "semester", "custom"].contains(&term.as_str()) {
+        return Err("Invalid term.".into());
+    }
+    if ![
+        "score",
+        "calculated",
+        "attendance",
+        "bonus",
+        "penalty",
+        "text",
+        "note",
+    ]
+    .contains(&field_type.as_str())
+    {
+        return Err("Invalid assessment field type.".into());
+    }
+    if field_type == "calculated" && rule_json.is_none() {
+        return Err("A calculated field needs a calculation recipe.".into());
+    }
+    if field_type != "calculated" && rule_json.is_some() {
+        return Err("Only calculated fields can contain a calculation recipe.".into());
+    }
+    if let Some(maximum) = max_mark {
+        if maximum <= 0.0 || !maximum.is_finite() {
+            return Err("Maximum mark must be a positive number.".into());
+        }
+    }
+    if let Some(value) = contribution {
+        if value < 0.0 || !value.is_finite() {
+            return Err("Contribution must be a non-negative number.".into());
+        }
+    }
+    let parsed_rule = rule_json
+        .as_deref()
+        .map(|rule| {
+            serde_json::from_str::<RuleNode>(rule)
+                .map_err(|e| format!("Calculation rule is invalid: {e}"))
+        })
+        .transpose()?;
+    let connection = connection(&state)?;
+    let (course_id, order_index, old) = connection
+        .query_row(
+            "SELECT course_id, order_index,
+                    json_object(
+                      'view_id', view_id, 'stable_key', stable_key, 'label', label,
+                      'term', term, 'field_type', field_type, 'max_mark', max_mark,
+                      'contribution', contribution, 'rule_json', rule_json,
+                      'is_final', is_final, 'archived', archived
+                    )
+             FROM assessment_fields WHERE id = ?1",
+            params![id],
+            |row| {
+                Ok((
+                    row.get::<_, i64>(0)?,
+                    row.get::<_, i64>(1)?,
+                    row.get::<_, String>(2)?,
+                ))
+            },
+        )
+        .optional()
+        .map_err(|e| e.to_string())?
+        .ok_or("Assessment field not found.")?;
+    if let Some(selected_view) = view_id {
+        let valid: i64 = connection
+            .query_row(
+                "SELECT EXISTS(
+                   SELECT 1 FROM gradebook_views WHERE id = ?1 AND course_id = ?2
+                 )",
+                params![selected_view, course_id],
+                |row| row.get(0),
+            )
+            .map_err(|e| e.to_string())?;
+        if valid == 0 {
+            return Err("The selected gradebook view does not belong to this course.".into());
+        }
+    }
+    if let Some(maximum) = max_mark {
+        let over_limit: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM grade_entries
+                 WHERE field_id = ?1 AND state = 'value' AND numeric_value > ?2",
+                params![id, maximum],
+                |row| row.get(0),
+            )
+            .map_err(|e| e.to_string())?;
+        if over_limit > 0 {
+            return Err(format!(
+                "Maximum mark cannot be reduced to {maximum} because {over_limit} saved entr{} exceed{} it.",
+                if over_limit == 1 { "y" } else { "ies" },
+                if over_limit == 1 { "s" } else { "" }
+            ));
+        }
+    }
+    if let Some(rule) = &parsed_rule {
+        for dependency in referenced_fields(rule) {
+            let belongs_to_course = connection
+                .query_row(
+                    "SELECT EXISTS(
+                       SELECT 1 FROM assessment_fields
+                       WHERE id = ?1 AND course_id = ?2 AND archived = 0
+                     )",
+                    params![dependency, course_id],
+                    |row| row.get::<_, i64>(0),
+                )
+                .map_err(|e| e.to_string())?
+                == 1;
+            if !belongs_to_course {
+                return Err(format!(
+                    "Calculation source field {dependency} is not an active field in this course."
+                ));
+            }
+        }
+        let mut rules = HashMap::from([(id, rule.clone())]);
+        let mut statement = connection
+            .prepare(
+                "SELECT id, rule_json FROM assessment_fields
+                 WHERE course_id = ?1 AND id <> ?2 AND rule_json IS NOT NULL AND archived = 0",
+            )
+            .map_err(|e| e.to_string())?;
+        for row in statement
+            .query_map(params![course_id, id], |row| {
+                Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?))
+            })
+            .map_err(|e| e.to_string())?
+        {
+            let (field_id, rule) = row.map_err(|e| e.to_string())?;
+            rules.insert(
+                field_id,
+                serde_json::from_str(&rule).map_err(|e| e.to_string())?,
+            );
+        }
+        validate_dependency_graph(&rules)?;
+    }
+    connection
+        .execute(
+            "UPDATE assessment_fields
+             SET view_id = ?1, stable_key = ?2, label = ?3, term = ?4,
+                 field_type = ?5, max_mark = ?6, contribution = ?7, rule_json = ?8,
+                 is_final = ?9, archived = ?10, updated_at = ?11
+             WHERE id = ?12",
+            params![
+                view_id,
+                stable_key,
+                label,
+                term,
+                field_type,
+                max_mark,
+                contribution,
+                rule_json,
+                is_final as i64,
+                archived as i64,
+                db::now(),
+                id
+            ],
+        )
+        .map_err(|e| format!("Unable to update assessment field: {e}"))?;
+    db::audit(
+        &connection,
+        "assessment_field",
+        Some(id),
+        "update",
+        Some(&old),
+        Some(
+            &json!({
+                "view_id": view_id,
+                "stable_key": stable_key,
+                "label": label,
+                "term": term,
+                "field_type": field_type,
+                "max_mark": max_mark,
+                "contribution": contribution,
+                "rule_json": rule_json,
+                "is_final": is_final,
+                "archived": archived
+            })
+            .to_string(),
+        ),
+        None,
+    )?;
+    Ok(AssessmentField {
+        id,
+        course_id,
+        view_id,
+        stable_key,
+        label,
+        term,
+        field_type,
+        max_mark,
+        contribution,
+        rule_json,
+        is_final,
+        order_index,
+        archived,
     })
 }
 
@@ -1454,6 +2005,54 @@ pub fn create_attendance_session(
 }
 
 #[tauri::command]
+pub fn update_attendance_session(
+    state: State<'_, DbState>,
+    id: i64,
+    held_on: String,
+    title: String,
+    note: Option<String>,
+) -> Result<AttendanceSession, String> {
+    let held_on = clean_required(&held_on, "Attendance date")?;
+    let title = if title.trim().is_empty() {
+        "Class".into()
+    } else {
+        title.trim().to_string()
+    };
+    let connection = connection(&state)?;
+    let (section_id, old) = connection
+        .query_row(
+            "SELECT section_id,
+                    json_object('held_on', held_on, 'title', title, 'note', note)
+             FROM attendance_sessions WHERE id = ?1",
+            params![id],
+            |row| Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?)),
+        )
+        .optional()
+        .map_err(|e| e.to_string())?
+        .ok_or("Attendance session not found.")?;
+    connection
+        .execute(
+            "UPDATE attendance_sessions SET held_on = ?1, title = ?2, note = ?3 WHERE id = ?4",
+            params![held_on, title, note, id],
+        )
+        .map_err(|e| format!("Unable to update attendance session: {e}"))?;
+    db::audit(
+        &connection,
+        "attendance_session",
+        Some(id),
+        "update",
+        Some(&old),
+        Some(&json!({"held_on": held_on, "title": title, "note": note}).to_string()),
+        None,
+    )?;
+    let (sessions, _) = get_attendance(state, section_id)?;
+    sessions
+        .into_iter()
+        .find(|session| session.id == id)
+        .ok_or("Updated attendance session not found.".into())
+}
+
+#[tauri::command]
 pub fn set_attendance_status(
     state: State<'_, DbState>,
     session_id: i64,
@@ -1779,6 +2378,269 @@ pub fn finalize_results(
     Ok(snapshot_id)
 }
 
+fn scalar_count(connection: &Connection, sql: &str, id: i64) -> Result<i64, String> {
+    connection
+        .query_row(sql, params![id], |row| row.get(0))
+        .map_err(|e| e.to_string())
+}
+
+fn delete_impact_for(
+    connection: &Connection,
+    entity_type: &str,
+    entity_id: i64,
+) -> Result<DeleteImpact, String> {
+    let (
+        label,
+        courses,
+        sections,
+        enrollments,
+        assessment_fields,
+        grade_entries,
+        attendance_sessions,
+        result_snapshots,
+    ) = match entity_type {
+        "section" => {
+            let label = connection
+                .query_row(
+                    "SELECT 'Section ' || label FROM sections WHERE id = ?1",
+                    params![entity_id],
+                    |row| row.get::<_, String>(0),
+                )
+                .optional()
+                .map_err(|e| e.to_string())?
+                .ok_or("Section not found.")?;
+            (
+                label,
+                0,
+                1,
+                scalar_count(
+                    connection,
+                    "SELECT COUNT(*) FROM enrollments WHERE section_id = ?1",
+                    entity_id,
+                )?,
+                0,
+                scalar_count(
+                    connection,
+                    "SELECT COUNT(*) FROM grade_entries ge
+                         JOIN enrollments e ON e.id = ge.enrollment_id
+                         WHERE e.section_id = ?1",
+                    entity_id,
+                )?,
+                scalar_count(
+                    connection,
+                    "SELECT COUNT(*) FROM attendance_sessions WHERE section_id = ?1",
+                    entity_id,
+                )?,
+                scalar_count(
+                    connection,
+                    "SELECT COUNT(*) FROM result_snapshots WHERE section_id = ?1",
+                    entity_id,
+                )?,
+            )
+        }
+        "course" => {
+            let label = connection
+                .query_row(
+                    "SELECT code || ' · ' || name FROM courses WHERE id = ?1",
+                    params![entity_id],
+                    |row| row.get::<_, String>(0),
+                )
+                .optional()
+                .map_err(|e| e.to_string())?
+                .ok_or("Course not found.")?;
+            (
+                label,
+                1,
+                scalar_count(
+                    connection,
+                    "SELECT COUNT(*) FROM sections WHERE course_id = ?1",
+                    entity_id,
+                )?,
+                scalar_count(
+                    connection,
+                    "SELECT COUNT(*) FROM enrollments e
+                         JOIN sections s ON s.id = e.section_id WHERE s.course_id = ?1",
+                    entity_id,
+                )?,
+                scalar_count(
+                    connection,
+                    "SELECT COUNT(*) FROM assessment_fields WHERE course_id = ?1",
+                    entity_id,
+                )?,
+                scalar_count(
+                    connection,
+                    "SELECT COUNT(*) FROM grade_entries ge
+                         JOIN assessment_fields f ON f.id = ge.field_id
+                         WHERE f.course_id = ?1",
+                    entity_id,
+                )?,
+                scalar_count(
+                    connection,
+                    "SELECT COUNT(*) FROM attendance_sessions a
+                         JOIN sections s ON s.id = a.section_id WHERE s.course_id = ?1",
+                    entity_id,
+                )?,
+                scalar_count(
+                    connection,
+                    "SELECT COUNT(*) FROM result_snapshots r
+                         JOIN sections s ON s.id = r.section_id WHERE s.course_id = ?1",
+                    entity_id,
+                )?,
+            )
+        }
+        "semester" => {
+            let label = connection
+                .query_row(
+                    "SELECT season || ' ' || session FROM semesters WHERE id = ?1",
+                    params![entity_id],
+                    |row| row.get::<_, String>(0),
+                )
+                .optional()
+                .map_err(|e| e.to_string())?
+                .ok_or("Semester not found.")?;
+            (
+                label,
+                scalar_count(
+                    connection,
+                    "SELECT COUNT(*) FROM courses WHERE semester_id = ?1",
+                    entity_id,
+                )?,
+                scalar_count(
+                    connection,
+                    "SELECT COUNT(*) FROM sections s
+                         JOIN courses c ON c.id = s.course_id WHERE c.semester_id = ?1",
+                    entity_id,
+                )?,
+                scalar_count(
+                    connection,
+                    "SELECT COUNT(*) FROM enrollments e
+                         JOIN sections s ON s.id = e.section_id
+                         JOIN courses c ON c.id = s.course_id WHERE c.semester_id = ?1",
+                    entity_id,
+                )?,
+                scalar_count(
+                    connection,
+                    "SELECT COUNT(*) FROM assessment_fields f
+                         JOIN courses c ON c.id = f.course_id WHERE c.semester_id = ?1",
+                    entity_id,
+                )?,
+                scalar_count(
+                    connection,
+                    "SELECT COUNT(*) FROM grade_entries ge
+                         JOIN assessment_fields f ON f.id = ge.field_id
+                         JOIN courses c ON c.id = f.course_id WHERE c.semester_id = ?1",
+                    entity_id,
+                )?,
+                scalar_count(
+                    connection,
+                    "SELECT COUNT(*) FROM attendance_sessions a
+                         JOIN sections s ON s.id = a.section_id
+                         JOIN courses c ON c.id = s.course_id WHERE c.semester_id = ?1",
+                    entity_id,
+                )?,
+                scalar_count(
+                    connection,
+                    "SELECT COUNT(*) FROM result_snapshots r
+                         JOIN sections s ON s.id = r.section_id
+                         JOIN courses c ON c.id = s.course_id WHERE c.semester_id = ?1",
+                    entity_id,
+                )?,
+            )
+        }
+        _ => return Err("Only a semester, course, or section can be deleted here.".into()),
+    };
+    Ok(DeleteImpact {
+        entity_type: entity_type.into(),
+        entity_id,
+        confirmation: format!("DELETE {label}"),
+        label,
+        courses,
+        sections,
+        enrollments,
+        assessment_fields,
+        grade_entries,
+        attendance_sessions,
+        result_snapshots,
+    })
+}
+
+#[tauri::command]
+pub fn get_delete_impact(
+    state: State<'_, DbState>,
+    entity_type: String,
+    entity_id: i64,
+) -> Result<DeleteImpact, String> {
+    delete_impact_for(&connection(&state)?, &entity_type, entity_id)
+}
+
+fn delete_academic_entity_from_connection(
+    connection: &mut Connection,
+    entity_type: &str,
+    entity_id: i64,
+    confirmation: &str,
+) -> Result<(), String> {
+    let impact = delete_impact_for(connection, entity_type, entity_id)?;
+    if confirmation != impact.confirmation {
+        return Err("Confirmation text does not match. Nothing was deleted.".into());
+    }
+    let transaction = connection.transaction().map_err(|e| e.to_string())?;
+    let table = match entity_type {
+        "semester" => "semesters",
+        "course" => "courses",
+        "section" => "sections",
+        _ => return Err("Only a semester, course, or section can be deleted here.".into()),
+    };
+    transaction
+        .execute(
+            &format!("DELETE FROM {table} WHERE id = ?1"),
+            params![entity_id],
+        )
+        .map_err(|e| format!("Unable to delete {}: {e}", impact.entity_type))?;
+    if entity_type == "semester" {
+        let active: i64 = transaction
+            .query_row(
+                "SELECT COUNT(*) FROM semesters WHERE is_active = 1",
+                [],
+                |row| row.get(0),
+            )
+            .map_err(|e| e.to_string())?;
+        if active == 0 {
+            transaction
+                .execute(
+                    "UPDATE semesters SET is_active = 1
+                     WHERE id = (SELECT id FROM semesters ORDER BY id DESC LIMIT 1)",
+                    [],
+                )
+                .map_err(|e| e.to_string())?;
+        }
+    }
+    db::audit(
+        &transaction,
+        entity_type,
+        Some(entity_id),
+        "delete",
+        Some(&serde_json::to_string(&impact).map_err(|e| e.to_string())?),
+        None,
+        Some("User completed exact destructive confirmation"),
+    )?;
+    transaction.commit().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn delete_academic_entity(
+    state: State<'_, DbState>,
+    entity_type: String,
+    entity_id: i64,
+    confirmation: String,
+) -> Result<(), String> {
+    delete_academic_entity_from_connection(
+        &mut connection(&state)?,
+        &entity_type,
+        entity_id,
+        &confirmation,
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1814,5 +2676,129 @@ mod tests {
             )
             .unwrap();
         assert_eq!(active, 1);
+    }
+
+    #[test]
+    fn delete_requires_exact_confirmation_and_cascades_section_data() {
+        let mut connection = db::open_memory().unwrap();
+        let now = db::now();
+        connection
+            .execute(
+                "INSERT INTO semesters(season, session, is_active, created_at)
+                 VALUES ('Fall','2025-2026',1,?1)",
+                params![now],
+            )
+            .unwrap();
+        let semester_id = connection.last_insert_rowid();
+        connection
+            .execute(
+                "INSERT INTO courses(
+                   semester_id, code, name, export_name, color_hex, created_at
+                 ) VALUES (?1,'CSC1','Course','COURSE','#8b5cf6',?2)",
+                params![semester_id, now],
+            )
+            .unwrap();
+        let course_id = connection.last_insert_rowid();
+        connection
+            .execute(
+                "INSERT INTO sections(course_id, label, created_at) VALUES (?1,'A',?2)",
+                params![course_id, now],
+            )
+            .unwrap();
+        let section_id = connection.last_insert_rowid();
+        connection
+            .execute(
+                "INSERT INTO students(
+                   student_identifier, name, created_at, updated_at
+                 ) VALUES ('1','Student',?1,?1)",
+                params![now],
+            )
+            .unwrap();
+        let student_id = connection.last_insert_rowid();
+        connection
+            .execute(
+                "INSERT INTO enrollments(section_id, student_id, created_at)
+                 VALUES (?1,?2,?3)",
+                params![section_id, student_id, now],
+            )
+            .unwrap();
+        let enrollment_id = connection.last_insert_rowid();
+        connection
+            .execute(
+                "INSERT INTO assessment_fields(
+                   course_id, stable_key, label, term, field_type, max_mark,
+                   created_at, updated_at
+                 ) VALUES (?1,'quiz','Quiz','mid','score',10,?2,?2)",
+                params![course_id, now],
+            )
+            .unwrap();
+        let field_id = connection.last_insert_rowid();
+        connection
+            .execute(
+                "INSERT INTO grade_entries(
+                   field_id, enrollment_id, numeric_value, state, created_at, updated_at
+                 ) VALUES (?1,?2,8,'value',?3,?3)",
+                params![field_id, enrollment_id, now],
+            )
+            .unwrap();
+        connection
+            .execute(
+                "INSERT INTO attendance_sessions(section_id, held_on, title, created_at)
+                 VALUES (?1,'2026-07-27','Class',?2)",
+                params![section_id, now],
+            )
+            .unwrap();
+        let attendance_id = connection.last_insert_rowid();
+        connection
+            .execute(
+                "INSERT INTO attendance_records(
+                   session_id, enrollment_id, status, updated_at
+                 ) VALUES (?1,?2,'present',?3)",
+                params![attendance_id, enrollment_id, now],
+            )
+            .unwrap();
+        connection
+            .execute(
+                "INSERT INTO result_snapshots(
+                   section_id, label, policy_json, rules_json, created_at
+                 ) VALUES (?1,'Final','{}','{}',?2)",
+                params![section_id, now],
+            )
+            .unwrap();
+        let snapshot_id = connection.last_insert_rowid();
+        connection
+            .execute(
+                "INSERT INTO snapshot_entries(snapshot_id, enrollment_id, result_json)
+                 VALUES (?1,?2,'{}')",
+                params![snapshot_id, enrollment_id],
+            )
+            .unwrap();
+        let impact = delete_impact_for(&connection, "section", section_id).unwrap();
+        assert_eq!(impact.enrollments, 1);
+        assert_eq!(impact.grade_entries, 1);
+        assert_eq!(impact.attendance_sessions, 1);
+        assert_eq!(impact.result_snapshots, 1);
+        assert!(delete_academic_entity_from_connection(
+            &mut connection,
+            "section",
+            section_id,
+            "wrong"
+        )
+        .is_err());
+        delete_academic_entity_from_connection(
+            &mut connection,
+            "section",
+            section_id,
+            &impact.confirmation,
+        )
+        .unwrap();
+        let remaining: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM enrollments WHERE section_id = ?1",
+                params![section_id],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(remaining, 0);
     }
 }

@@ -1,53 +1,86 @@
-# Gradia 0.2.0
+# Gradia 0.2.1
 
-Gradia 0.2.0 makes assessment setup self-explanatory, keeps focused entry
-synchronized with the full roster, and introduces native packages for Windows,
-macOS, and Linux.
+Gradia 0.2.1 is a corrective release for focused-entry navigation and Windows
+standalone distribution. It also turns the existing verified backup mechanism
+into a clear database export/import workflow for moving an entire workspace to
+another device.
 
-## Highlights
+## What is fixed
 
-- **Focused entry follows the student.** Moving from student 12 to 13 now advances
-  the left finder to the next roster window; the selected student never disappears
-  from the visible list.
-- **Every assessment type explains itself.** Score, Calculated, Attendance, Bonus,
-  Penalty, Text, and Note include behavior guidance and a concrete example.
-- **Every starter gradebook view explains itself.** The dialog clarifies No
-  specific view, Midterm, Final, Semester Result, and Attendance, including the
-  difference between a Term and a View.
-- **Setup shows the active destination.** A visible Semester → Course → Section
-  path makes it clear where courses, sections, and students will be added.
-- **Text means text.** Text and Note fields now accept and persist written values
-  in the main gradebook and focused-entry form.
-- **Penalties can be deducted.** The visual calculation builder now exposes
-  subtraction using the first selected source minus the later sources.
+- **The left student list follows Next student.** With a 40-student roster,
+  moving from position 12 to 13 changes the visible list from 1–12 to 13–24.
+  The same behavior continues at positions 24→25 and 36→37 through the actual
+  end of the roster.
+- **The finder states exactly what is visible.** It displays ranges such as
+  `Showing 13–24 of 40`, and the selected row is brought into view.
+- **Guidance is unmistakable.** The Add assessment dialog labels its live help
+  as “What this type does” and “What this view means”, with behavior and an
+  example for every selectable assessment type and gradebook view.
+- **You can confirm the build.** The sidebar displays `v0.2.1`.
+
+## Database transfer
+
+Settings now contains **Export database** and **Import database**:
+
+1. Export creates one `.gradia` file containing the complete local workspace.
+2. Move that file to another Windows, macOS, or Linux device.
+3. Install Gradia there and use Import database.
+4. Gradia validates the format, embedded SHA-256 checksum, SQLite integrity, and
+   migrations before replacing the destination device’s current database.
+
+The custom extension prevents accidental selection of unrelated files, but it is
+not encryption. Store `.gradia` files securely because they contain academic
+records. Password-encrypted transfer is a separate roadmap item.
+
+## Edit what you created
+
+- **Setup:** edit semester, course code/name/export name/accent color/policy,
+  section label, student identity/email/roster position/status, grading policy,
+  and gradebook views.
+- **Gradebook:** select any assessment header to edit its label, stable key, term,
+  type, maximum, contribution, view, calculation recipe, final-result role, or
+  archived state without discarding existing student entries.
+- **Attendance:** edit a session’s date, title, or note without changing its
+  saved attendance statuses.
+- **Existing values:** marks, written fields, attendance statuses, and pipeline
+  stages remain directly editable as before.
+
+Every structural update stores old/new audit values. Gradia rejects an assessment
+maximum below an already saved mark.
+
+## Deliberate permanent deletion
+
+Setup can permanently delete the selected semester, course, or section. Before
+enabling deletion, Gradia displays the cascade impact across child structures,
+rosters, marks, attendance, and snapshots and requires the exact displayed phrase.
+If the active semester is deleted, another remaining semester is activated
+automatically.
 
 ## Downloads
 
-- **Windows x64:** NSIS setup `.exe` or Windows Installer `.msi`.
+- **Windows x64:** standalone `.exe`, NSIS setup `.exe`, or Windows Installer
+  `.msi`.
 - **macOS Apple Silicon:** `aarch64` `.dmg`.
 - **macOS Intel:** `x64` `.dmg`.
 - **Linux x64:** portable `.AppImage` or Debian/Ubuntu `.deb`.
-- **Integrity:** `RELEASE_CHECKSUMS.txt` lists SHA-256 values for every downloadable
-  package.
+- **Integrity:** `RELEASE_CHECKSUMS.txt` lists SHA-256 values for every
+  downloadable package.
 
-These packages are built on native GitHub-hosted operating-system runners. They
-are not commercially code-signed or Apple-notarized. macOS builds use an ad-hoc
-signature, but macOS may still require approval under **System Settings → Privacy
-& Security**. Windows may show an unfamiliar-publisher warning.
-
-## Privacy and compatibility
-
-All editions use the same local SQLite model and `.gradia` backup format. Normal
-operation remains account-free and makes no required runtime network requests.
-Back up `gradia.db` before moving between versions or computers.
+The packages are built on native GitHub-hosted runners. They are not commercially
+code-signed or Apple-notarized. Windows/macOS may therefore show an
+unfamiliar-developer warning.
 
 ## Verification
 
-- Frontend behavioral and rendering tests.
-- Rust unit, calculation, database, snapshot, backup, and Excel-fidelity tests.
+- Frontend regression tests, including every 12-record boundary of a 40-student
+  roster.
+- Rust database-transfer, calculation, database, snapshot, backup, and
+  Excel-fidelity tests.
 - Rust formatting and Clippy checks.
 - Production frontend build.
 - Native Windows, macOS Apple Silicon, macOS Intel, and Linux release builds.
+- Independent download and launch check of the published Windows standalone
+  executable before the draft release is made public.
 
 ## License
 

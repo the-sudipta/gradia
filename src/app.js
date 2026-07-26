@@ -1,6 +1,7 @@
 import { call, chooseOpenFile, chooseSaveFile, isDesktop } from "./api.js";
 import { barChart, distributionChart, donutChart } from "./charts.js";
 import gradiaLogoUrl from "./assets/gradia-logo-transparent.png";
+import packageMetadata from "../package.json";
 import {
   assessmentTypeGuide,
   entryKey,
@@ -13,12 +14,13 @@ import {
   optimisticGradeUpdate,
   percentage,
   rankStudents,
-  studentWindow,
+  studentWindowDetails,
   validateMark
 } from "./core.js";
 
 const app = document.querySelector("#app");
 const toastRegion = document.querySelector("#toast-region");
+const APP_VERSION = packageMetadata.version;
 
 const state = {
   bootstrap: null,
@@ -184,7 +186,10 @@ function renderShell() {
       <aside class="sidebar">
         <div class="brand">
           <img src="${gradiaLogoUrl}" alt="" />
-          <div><strong>Gradia</strong><span>Smarter academic assessment.</span></div>
+          <div class="brand-copy">
+            <div class="brand-name"><strong>Gradia</strong><span class="version-chip">v${escapeHtml(APP_VERSION)}</span></div>
+            <span>Smarter academic assessment.</span>
+          </div>
         </div>
         <div class="context-stack">
           <span class="context-label">Academic context</span>
@@ -414,7 +419,7 @@ function renderGradebook() {
                   ${fields
                     .map(
                       (field) =>
-                        `<th><span class="field-head"><span>${escapeHtml(field.label)}</span><small>${field.max_mark ? `out of ${formatNumber(field.max_mark)}` : field.field_type}${field.is_final ? " · final" : ""}</small></span></th>`
+                        `<th><button class="field-head field-edit-button" type="button" data-edit-field="${field.id}" aria-label="Edit ${escapeHtml(field.label)}"><span>${escapeHtml(field.label)}</span><small>${field.max_mark ? `out of ${formatNumber(field.max_mark)}` : field.field_type}${field.is_final ? " · final" : ""} · Edit</small></button></th>`
                     )
                     .join("")}
                 </tr></thead>
@@ -472,9 +477,14 @@ function renderQuickEntry() {
   if (selected && selected.enrollment_id !== Number(state.quickStudentId)) {
     state.quickStudentId = selected.enrollment_id;
   }
-  const ranked = state.quickQuery.trim()
-    ? searchResults
-    : studentWindow(state.gradebook.enrollments, state.quickStudentId);
+  const rosterWindow = studentWindowDetails(
+    state.gradebook.enrollments,
+    state.quickStudentId
+  );
+  const ranked = state.quickQuery.trim() ? searchResults : rosterWindow.students;
+  const finderStatus = state.quickQuery.trim()
+    ? `${searchResults.length} match${searchResults.length === 1 ? "" : "es"} · ${state.gradebook.enrollments.length} enrolled`
+    : `Showing ${rosterWindow.start}–${rosterWindow.end} of ${rosterWindow.total}`;
   const map = entriesMap();
   const fields = state.gradebook.fields.filter(
     (field) => !field.archived && !["calculated", "grade"].includes(field.field_type)
@@ -486,12 +496,12 @@ function renderQuickEntry() {
       </div>
       <div class="quick-layout">
         <section class="panel student-finder">
-          <div class="panel-header"><h3>Student finder</h3><span>${state.gradebook.enrollments.length} enrolled</span></div>
+          <div class="panel-header"><h3>Student finder</h3><span id="finder-status" aria-live="polite">${finderStatus}</span></div>
           <input class="search-input" style="width:100%" id="student-search" value="${escapeHtml(state.quickQuery)}" placeholder="Type ID or any part of a name…" />
-          <div class="finder-results">
+          <div class="finder-results" aria-describedby="finder-status">
             ${ranked
               .map(
-                (student) => `<button class="student-result ${student.enrollment_id === Number(state.quickStudentId) ? "active" : ""}" data-student="${student.enrollment_id}">
+                (student) => `<button class="student-result ${student.enrollment_id === Number(state.quickStudentId) ? "active" : ""}" data-student="${student.enrollment_id}" ${student.enrollment_id === Number(state.quickStudentId) ? 'aria-current="true"' : ""}>
                   <span class="avatar">${initials(student.name)}</span>
                   <span><strong>${escapeHtml(student.name)}</strong><small>${escapeHtml(student.student_identifier)}</small></span>
                   <span>›</span>
@@ -567,7 +577,7 @@ function renderAttendance() {
         <section class="panel">
           ${
             active
-              ? `<div class="panel-header"><h3>${escapeHtml(active.held_on)} · ${escapeHtml(active.title)}</h3><span>Changes save immediately</span></div>
+              ? `<div class="panel-header"><h3>${escapeHtml(active.held_on)} · ${escapeHtml(active.title)}</h3><div class="panel-header-actions"><span>Changes save immediately</span><button class="button compact" id="edit-attendance-session">Edit session</button></div></div>
                  <div class="attendance-summary">
                    <span class="status-chip present">${active.present} Present</span>
                    <span class="status-chip absent">${active.absent} Absent</span>
@@ -770,14 +780,19 @@ function renderSetup() {
         <section class="setup-card"><h3>Add student</h3><p>Student ID is authoritative and remains text. Existing students can be enrolled in another section.</p>
           <form id="student-form"><div class="form-group"><label>Student ID</label><input class="form-control" name="student_id" placeholder="26-10001-1" required /></div><div class="form-group"><label>Name</label><input class="form-control" name="name" placeholder="Student full name" required /></div><div class="form-group"><label>Email <small>optional</small></label><input class="form-control" name="email" type="email" /></div><button class="button primary" type="submit" ${state.sectionId ? "" : "disabled"}>Enroll student</button></form>
           <div class="setup-divider"><span>or</span></div>
-          <button class="button" id="import-roster" ${state.sectionId ? "" : "disabled"}>↗ Import roster from Excel</button>
+          <div class="setup-button-row"><button class="button" id="import-roster" ${state.sectionId ? "" : "disabled"}>↗ Import roster from Excel</button><button class="button" id="edit-student" ${state.gradebook?.enrollments?.length ? "" : "disabled"}>Edit enrolled student</button></div>
         </section>
         <section class="setup-card"><h3>Grading policies</h3><p>Build versioned grade ranges for any institute; no AIUB thresholds are hard-coded.</p>
           <div class="policy-bands">${policies.map((policy) => `<button class="policy-band policy-button" data-policy="${policy.id}"><span class="band-color" style="--band-color:${policy.is_default ? "#62f0bd" : "#8b5cf6"}"></span><strong>v${policy.version}</strong><span>${escapeHtml(policy.name)}</span><span class="tag">${policy.is_default ? "Default" : "Edit"}</span></button>`).join("")}</div>
           <button class="button" id="new-policy" style="margin-top:14px">＋ New policy</button>
         </section>
         <section class="setup-card"><h3>Assessment & calculations</h3><p>Add raw fields or compose totals, averages, best-N, dropped-lowest, scaling, multiplication, and weighted results visually.</p>
-          <div style="display:flex;gap:8px;margin-top:16px"><button class="button primary" id="add-field-card" ${state.courseId ? "" : "disabled"}>＋ Add assessment</button><button class="button" data-route="gradebook">Open gradebook</button></div>
+          <div class="setup-button-row"><button class="button primary" id="add-field-card" ${state.courseId ? "" : "disabled"}>＋ Add assessment</button><button class="button" id="manage-gradebook-views" ${state.courseId ? "" : "disabled"}>Manage views</button><button class="button" data-route="gradebook">Open gradebook</button></div>
+        </section>
+        <section class="setup-card manage-context-card"><h3>Edit or permanently delete</h3><p>Edit the currently selected academic context. Permanent deletion shows the exact downstream impact before it can proceed.</p>
+          <div class="manage-context-row"><span><strong>Semester</strong><small>${escapeHtml(semester ? `${semester.season} ${semester.session}` : "None selected")}</small></span><div><button class="button compact" id="edit-semester" ${semester ? "" : "disabled"}>Edit</button><button class="button compact danger" id="delete-semester" ${semester ? "" : "disabled"}>Delete</button></div></div>
+          <div class="manage-context-row"><span><strong>Course</strong><small>${escapeHtml(course ? `${course.code} · ${course.name}` : "None selected")}</small></span><div><button class="button compact" id="edit-course" ${course ? "" : "disabled"}>Edit</button><button class="button compact danger" id="delete-course" ${course ? "" : "disabled"}>Delete</button></div></div>
+          <div class="manage-context-row"><span><strong>Section</strong><small>${escapeHtml(section ? `Section ${section.label}` : "None selected")}</small></span><div><button class="button compact" id="edit-section" ${section ? "" : "disabled"}>Edit</button><button class="button compact danger" id="delete-section" ${section ? "" : "disabled"}>Delete</button></div></div>
         </section>
       </div>
     </div>`;
@@ -786,13 +801,13 @@ function renderSetup() {
 function renderSettings() {
   return `
     <div class="page">
-      <div class="page-header"><div><div class="page-kicker">Gradia system</div><h2>Private, portable, recoverable.</h2><p>Backups include the complete Gradia database, a format manifest, and a SHA-256 integrity checksum.</p></div></div>
+      <div class="page-header"><div><div class="page-kicker">Gradia system</div><h2>Private, portable, recoverable.</h2><p>Move the complete database between devices using one validated Gradia transfer file.</p></div></div>
       <div class="setup-grid">
-        <section class="setup-card"><h3>Save Gradia backup</h3><p>Create a portable <code>.gradia</code> container. Keep sensitive backups in a protected location.</p><button class="button primary" id="save-backup" style="margin-top:16px">Save backup</button></section>
-        <section class="setup-card"><h3>Restore backup</h3><p>Gradia verifies the format, checksum, SQLite integrity, and migrations before replacing local data.</p><button class="button danger" id="restore-backup" style="margin-top:16px">Restore backup</button></section>
+        <section class="setup-card"><h3>Export database</h3><p>Create one portable <code>.gradia</code> file containing all semesters, courses, rosters, marks, attendance, policies, and settings.</p><p class="transfer-caution">Integrity protected, but not password encrypted—store it securely.</p><button class="button primary" id="export-database" style="margin-top:16px">Export database</button></section>
+        <section class="setup-card"><h3>Import database</h3><p>On another device, select the exported <code>.gradia</code> file. Gradia verifies its format, SHA-256 checksum, SQLite integrity, and migrations before replacing local data.</p><p class="transfer-caution">Export this device first if its current data must be retained.</p><button class="button danger" id="import-database" style="margin-top:16px">Import database</button></section>
         <section class="setup-card"><h3>Runtime posture</h3><p>Normal operation uses the local SQLite database and bundled application assets. Telemetry and update checks are disabled.</p><div class="policy-bands"><div class="policy-band"><span class="band-color" style="--band-color:#62f0bd"></span><strong>Local</strong><span>Database</span><span class="tag">gradia.db</span></div><div class="policy-band"><span class="band-color" style="--band-color:#62f0bd"></span><strong>Zero</strong><span>Runtime network calls</span><span class="tag">Required</span></div></div></section>
         <section class="setup-card"><h3>Welcome & semester setup</h3><p>Reopen the guided welcome screen at any time. Existing semesters, courses, rosters, marks, and attendance remain untouched.</p><button class="button primary" id="open-welcome" style="margin-top:16px">Open welcome & setup</button></section>
-        <section class="setup-card"><h3>About</h3><p><strong>Gradia</strong><br />Smarter academic assessment.<br /><br />Version 0.2.0 · Tauri desktop architecture.</p></section>
+        <section class="setup-card"><h3>About</h3><p><strong>Gradia</strong><br />Smarter academic assessment.<br /><br />Version ${escapeHtml(APP_VERSION)} · Tauri desktop architecture.</p></section>
       </div>
     </div>`;
 }
@@ -840,54 +855,319 @@ function modal(content) {
   return backdrop;
 }
 
-function guideCardMarkup(guide) {
+function guideCardMarkup(guide, eyebrow) {
   return `
+    <span class="guide-eyebrow">${escapeHtml(eyebrow)}</span>
     <strong>${escapeHtml(guide.label)}</strong>
     <p>${escapeHtml(guide.behavior)}</p>
     <small><span>Example</span>${escapeHtml(guide.example)}</small>`;
 }
 
-function openFieldModal() {
-  if (!state.courseId) return toast("Select a course first.", "error");
-  const views = state.gradebook?.views ?? [];
-  const sourceFields = (state.gradebook?.fields ?? []).filter((field) => !field.archived);
-  const initialTypeGuide = assessmentTypeGuide("score");
-  const initialViewGuide = gradebookViewGuide();
+async function refreshAfterStructureChange({ preserve = true } = {}) {
+  await refreshBootstrap({ preserve });
+  state.dashboard = null;
+  state.gradebook = null;
+  state.analytics = null;
+  state.attendance = null;
+  state.pipeline = null;
+  state.quickStudentId = null;
+  await loadRoute();
+}
+
+function openContextEditor(kind) {
+  const record =
+    kind === "semester" ? activeSemester() : kind === "course" ? activeCourse() : activeSection();
+  if (!record) return toast(`Select a ${kind} first.`, "error");
+  const policyOptions = state.bootstrap.policies
+    .map(
+      (policy) =>
+        `<option value="${policy.id}" ${policy.id === Number(record.grading_policy_id) ? "selected" : ""}>${escapeHtml(policy.name)}</option>`
+    )
+    .join("");
+  const fields =
+    kind === "semester"
+      ? `<div class="inline-fields"><div class="form-group"><label>Season</label><input class="form-control" name="season" value="${escapeHtml(record.season)}" required /></div><div class="form-group"><label>Academic session</label><input class="form-control" name="session" value="${escapeHtml(record.session)}" required /></div></div>`
+      : kind === "course"
+        ? `<div class="inline-fields"><div class="form-group"><label>Course code</label><input class="form-control" name="code" value="${escapeHtml(record.code)}" required /></div><div class="form-group"><label>Accent color</label><input class="form-control" name="color" type="color" value="${escapeHtml(record.color_hex)}" /></div></div><div class="form-group"><label>Course name</label><input class="form-control" name="name" value="${escapeHtml(record.name)}" required /></div><div class="form-group"><label>Official export name</label><input class="form-control" name="export_name" value="${escapeHtml(record.export_name)}" required /></div><div class="form-group"><label>Grading policy</label><select class="form-control" name="policy">${policyOptions}</select></div>`
+        : `<div class="form-group"><label>Section label</label><input class="form-control" name="label" value="${escapeHtml(record.label)}" required /></div>`;
   const box = modal(`
-    <h3>Add assessment field</h3><p>Create a validated raw column or a reusable calculation. Missing source marks remain missing.</p>
+    <h3>Edit ${escapeHtml(kind)}</h3>
+    <p>Changes apply everywhere this record is used and are written to Gradia’s audit history.</p>
+    <form id="context-edit-form">${fields}
+      <div class="modal-actions"><button type="button" class="button" data-close-modal>Cancel</button><button type="submit" class="button primary">Save changes</button></div>
+    </form>`);
+  box.querySelector("#context-edit-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    try {
+      if (kind === "semester") {
+        await call("update_semester", {
+          id: record.id,
+          season: data.get("season"),
+          session: data.get("session")
+        });
+      } else if (kind === "course") {
+        await call("update_course", {
+          id: record.id,
+          code: data.get("code"),
+          name: data.get("name"),
+          exportName: data.get("export_name"),
+          colorHex: data.get("color"),
+          gradingPolicyId: data.get("policy") ? Number(data.get("policy")) : null
+        });
+      } else {
+        await call("update_section", { id: record.id, label: data.get("label") });
+      }
+      box.remove();
+      toast(`${kind[0].toUpperCase()}${kind.slice(1)} updated.`, "success");
+      await refreshAfterStructureChange();
+    } catch (error) {
+      toast(errorMessage(error), "error");
+    }
+  });
+}
+
+function openStudentEditor() {
+  const students = state.gradebook?.enrollments ?? [];
+  if (!students.length) return toast("This section has no enrolled students.", "error");
+  const initial =
+    students.find((student) => student.enrollment_id === Number(state.quickStudentId)) ?? students[0];
+  const box = modal(`
+    <h3>Edit enrolled student</h3>
+    <p>Identity changes update the shared student record; status and roster position apply to this section.</p>
+    <form id="student-edit-form">
+      <div class="form-group"><label>Student</label><select class="form-control" name="enrollment">${students.map((student) => `<option value="${student.enrollment_id}" ${student.enrollment_id === initial.enrollment_id ? "selected" : ""}>${escapeHtml(student.student_identifier)} · ${escapeHtml(student.name)}</option>`).join("")}</select></div>
+      <div class="inline-fields"><div class="form-group"><label>Student ID</label><input class="form-control" name="student_id" required /></div><div class="form-group"><label>Name</label><input class="form-control" name="name" required /></div></div>
+      <div class="inline-fields"><div class="form-group"><label>Email</label><input class="form-control" name="email" type="email" /></div><div class="form-group"><label>Roster position</label><input class="form-control" name="position" type="number" min="1" max="${students.length}" step="1" required /></div></div>
+      <div class="form-group"><label>Enrollment status</label><select class="form-control" name="status"><option value="active">Active</option><option value="withdrawn">Withdrawn</option><option value="incomplete">Incomplete</option><option value="archived">Archived</option></select></div>
+      <div class="modal-actions"><button type="button" class="button" data-close-modal>Cancel</button><button type="submit" class="button primary">Save student</button></div>
+    </form>`);
+  const form = box.querySelector("#student-edit-form");
+  const sync = () => {
+    const student = students.find(
+      (item) => item.enrollment_id === Number(form.elements.enrollment.value)
+    );
+    if (!student) return;
+    form.elements.student_id.value = student.student_identifier;
+    form.elements.name.value = student.name;
+    form.elements.email.value = student.email ?? "";
+    form.elements.position.value = student.roll_order + 1;
+    form.elements.status.value = student.status;
+  };
+  form.elements.enrollment.addEventListener("change", sync);
+  sync();
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const data = new FormData(form);
+    try {
+      await call("update_student", {
+        enrollmentId: Number(data.get("enrollment")),
+        studentIdentifier: data.get("student_id"),
+        name: data.get("name"),
+        email: data.get("email") || null,
+        status: data.get("status"),
+        rollOrder: Number(data.get("position")) - 1
+      });
+      box.remove();
+      toast("Student and enrollment updated.", "success");
+      await refreshAfterStructureChange();
+    } catch (error) {
+      toast(errorMessage(error), "error");
+    }
+  });
+}
+
+function openGradebookViewEditor() {
+  const views = state.gradebook?.views ?? [];
+  const box = modal(`
+    <h3>Manage gradebook views</h3>
+    <p>Create a new grouping or edit the name and term of an existing one. Fields assigned to an edited view remain attached.</p>
+    <form id="view-edit-form">
+      <div class="form-group"><label>View to edit</label><select class="form-control" name="view_id"><option value="">＋ Create new view</option>${views.map((view) => `<option value="${view.id}">${escapeHtml(view.name)}</option>`).join("")}</select></div>
+      <div class="inline-fields"><div class="form-group"><label>View name</label><input class="form-control" name="name" placeholder="Practical work" required /></div><div class="form-group"><label>Term</label><select class="form-control" name="term"><option value="mid">Midterm</option><option value="final">Final</option><option value="semester">Semester</option><option value="custom">Custom</option></select></div></div>
+      <div class="modal-actions"><button type="button" class="button" data-close-modal>Cancel</button><button type="submit" class="button primary">Save view</button></div>
+    </form>`);
+  const form = box.querySelector("#view-edit-form");
+  const sync = () => {
+    const view = views.find((item) => item.id === Number(form.elements.view_id.value));
+    form.elements.name.value = view?.name ?? "";
+    form.elements.term.value = view?.term ?? "custom";
+  };
+  form.elements.view_id.addEventListener("change", sync);
+  sync();
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const data = new FormData(form);
+    try {
+      if (data.get("view_id")) {
+        await call("update_gradebook_view", {
+          id: Number(data.get("view_id")),
+          name: data.get("name"),
+          term: data.get("term")
+        });
+      } else {
+        await call("create_gradebook_view", {
+          courseId: Number(state.courseId),
+          name: data.get("name"),
+          term: data.get("term")
+        });
+      }
+      box.remove();
+      toast("Gradebook view saved.", "success");
+      await refreshAfterStructureChange();
+    } catch (error) {
+      toast(errorMessage(error), "error");
+    }
+  });
+}
+
+async function openDeleteModal(kind) {
+  const record =
+    kind === "semester" ? activeSemester() : kind === "course" ? activeCourse() : activeSection();
+  if (!record) return toast(`Select a ${kind} first.`, "error");
+  try {
+    const impact = await call("get_delete_impact", {
+      entityType: kind,
+      entityId: record.id
+    });
+    const box = modal(`
+      <h3>Permanently delete ${escapeHtml(impact.label)}?</h3>
+      <p>This cannot be undone from inside Gradia. Export the database first if you may need these records again.</p>
+      <div class="delete-impact-grid">
+        <span><strong>${impact.courses}</strong> courses</span><span><strong>${impact.sections}</strong> sections</span><span><strong>${impact.enrollments}</strong> enrollments</span><span><strong>${impact.assessment_fields}</strong> assessment fields</span><span><strong>${impact.grade_entries}</strong> grade entries</span><span><strong>${impact.attendance_sessions}</strong> attendance sessions</span><span><strong>${impact.result_snapshots}</strong> result snapshots</span>
+      </div>
+      <div class="form-group"><label>Type <code>${escapeHtml(impact.confirmation)}</code> to confirm</label><input class="form-control" id="delete-confirmation" autocomplete="off" /></div>
+      <div class="modal-actions"><button type="button" class="button" data-close-modal>Cancel</button><button type="button" class="button danger" id="confirm-delete" disabled>Permanently delete</button></div>`);
+    const input = box.querySelector("#delete-confirmation");
+    const confirm = box.querySelector("#confirm-delete");
+    input.addEventListener("input", () => {
+      confirm.disabled = input.value !== impact.confirmation;
+    });
+    confirm.addEventListener("click", async () => {
+      try {
+        await call("delete_academic_entity", {
+          entityType: kind,
+          entityId: record.id,
+          confirmation: input.value
+        });
+        box.remove();
+        toast(`${impact.label} permanently deleted.`, "success");
+        await refreshAfterStructureChange({ preserve: false });
+      } catch (error) {
+        toast(errorMessage(error), "error");
+      }
+    });
+  } catch (error) {
+    toast(errorMessage(error), "error");
+  }
+}
+
+function flattenSubtractionRule(rule) {
+  if (rule?.op !== "subtract") return [rule];
+  return [...flattenSubtractionRule(rule.left), rule.right];
+}
+
+function calculationEditorState(field) {
+  const fallback = {
+    operation: "sum",
+    sourceIds: [],
+    count: 1,
+    factor: 2,
+    from: 100,
+    to: 40,
+    weights: ""
+  };
+  if (!field?.rule_json) return fallback;
+  try {
+    const rule = JSON.parse(field.rule_json);
+    if (["sum", "average", "maximum", "best_n", "drop_lowest"].includes(rule.op)) {
+      return {
+        ...fallback,
+        operation: rule.op,
+        sourceIds: (rule.inputs ?? []).map((input) => input.field_id),
+        count: rule.count ?? 1
+      };
+    }
+    if (["multiply", "scale"].includes(rule.op)) {
+      return {
+        ...fallback,
+        operation: rule.op,
+        sourceIds: rule.input?.field_id ? [rule.input.field_id] : [],
+        factor: rule.factor ?? 2,
+        from: rule.from ?? 100,
+        to: rule.to ?? 40
+      };
+    }
+    if (rule.op === "weighted_sum") {
+      return {
+        ...fallback,
+        operation: rule.op,
+        sourceIds: (rule.items ?? []).map((item) => item.input?.field_id).filter(Boolean),
+        weights: (rule.items ?? []).map((item) => item.weight).join(", ")
+      };
+    }
+    if (rule.op === "subtract") {
+      return {
+        ...fallback,
+        operation: "subtract",
+        sourceIds: flattenSubtractionRule(rule)
+          .map((input) => input?.field_id)
+          .filter(Boolean)
+      };
+    }
+  } catch {
+    return fallback;
+  }
+  return fallback;
+}
+
+function openFieldModal(fieldId = null) {
+  if (!state.courseId) return toast("Select a course first.", "error");
+  const field = (state.gradebook?.fields ?? []).find((item) => item.id === Number(fieldId));
+  const calculation = calculationEditorState(field);
+  const views = state.gradebook?.views ?? [];
+  const sourceFields = (state.gradebook?.fields ?? []).filter(
+    (item) => !item.archived && item.id !== field?.id
+  );
+  const initialTypeGuide = assessmentTypeGuide(field?.field_type ?? "score");
+  const selectedView = views.find((view) => view.id === Number(field?.view_id));
+  const initialViewGuide = gradebookViewGuide(selectedView?.name, selectedView?.term);
+  const box = modal(`
+    <h3>${field ? "Edit assessment field" : "Add assessment field"}</h3><p>${field ? "Update this field without deleting its existing student entries." : "Create a validated raw column or a reusable calculation."} Missing source marks remain missing.</p>
     <form id="field-form">
-      <div class="inline-fields"><div class="form-group"><label>Label</label><input class="form-control" name="label" placeholder="OBE Assessment" required /></div><div class="form-group"><label>Stable key</label><input class="form-control" name="key" placeholder="obe_assessment" required /></div></div>
-      <div class="inline-fields"><div class="form-group"><label>Term</label><select class="form-control" name="term"><option value="mid">Midterm</option><option value="final">Final</option><option value="semester">Semester</option><option value="custom">Custom</option></select></div><div class="form-group"><label>Type</label><select class="form-control" name="type"><option value="score">Score — entered mark</option><option value="calculated">Calculated — formula result</option><option value="attendance">Attendance — converted mark</option><option value="bonus">Bonus — extra credit</option><option value="penalty">Penalty — deduction amount</option><option value="text">Text — short written value</option><option value="note">Note — student context</option></select></div></div>
-      <div class="guide-card" id="assessment-type-guide" aria-live="polite">${guideCardMarkup(initialTypeGuide)}</div>
-      <div class="inline-fields"><div class="form-group"><label>Maximum mark</label><input class="form-control" name="maximum" type="number" min="0.01" step="0.01" /></div><div class="form-group"><label>Contribution</label><input class="form-control" name="contribution" type="number" min="0" step="0.01" /></div></div>
-      <div class="form-group"><label>Gradebook view</label><select class="form-control" name="view"><option value="">No specific view</option>${views.map((view) => `<option value="${view.id}">${escapeHtml(view.name)}</option>`).join("")}</select></div>
-      <div class="guide-card secondary" id="gradebook-view-guide" aria-live="polite">${guideCardMarkup(initialViewGuide)}</div>
+      <div class="inline-fields"><div class="form-group"><label>Label</label><input class="form-control" name="label" value="${escapeHtml(field?.label ?? "")}" placeholder="OBE Assessment" required /></div><div class="form-group"><label>Stable key</label><input class="form-control" name="key" value="${escapeHtml(field?.stable_key ?? "")}" placeholder="obe_assessment" required /></div></div>
+      <div class="inline-fields"><div class="form-group"><label>Term</label><select class="form-control" name="term"><option value="mid" ${field?.term === "mid" ? "selected" : ""}>Midterm</option><option value="final" ${field?.term === "final" ? "selected" : ""}>Final</option><option value="semester" ${field?.term === "semester" ? "selected" : ""}>Semester</option><option value="custom" ${field?.term === "custom" ? "selected" : ""}>Custom</option></select></div><div class="form-group"><label>Type</label><select class="form-control" name="type"><option value="score" ${!field || field.field_type === "score" ? "selected" : ""}>Score — entered mark</option><option value="calculated" ${field?.field_type === "calculated" ? "selected" : ""}>Calculated — formula result</option><option value="attendance" ${field?.field_type === "attendance" ? "selected" : ""}>Attendance — converted mark</option><option value="bonus" ${field?.field_type === "bonus" ? "selected" : ""}>Bonus — extra credit</option><option value="penalty" ${field?.field_type === "penalty" ? "selected" : ""}>Penalty — deduction amount</option><option value="text" ${field?.field_type === "text" ? "selected" : ""}>Text — short written value</option><option value="note" ${field?.field_type === "note" ? "selected" : ""}>Note — student context</option></select></div></div>
+      <div class="guide-card" id="assessment-type-guide" aria-live="polite">${guideCardMarkup(initialTypeGuide, "What this type does")}</div>
+      <div class="inline-fields"><div class="form-group"><label>Maximum mark</label><input class="form-control" name="maximum" type="number" min="0.01" step="0.01" value="${field?.max_mark ?? ""}" /></div><div class="form-group"><label>Contribution</label><input class="form-control" name="contribution" type="number" min="0" step="0.01" value="${field?.contribution ?? ""}" /></div></div>
+      <div class="form-group"><label>Gradebook view</label><select class="form-control" name="view"><option value="">No specific view</option>${views.map((view) => `<option value="${view.id}" ${view.id === Number(field?.view_id) ? "selected" : ""}>${escapeHtml(view.name)}</option>`).join("")}</select></div>
+      <div class="guide-card secondary" id="gradebook-view-guide" aria-live="polite">${guideCardMarkup(initialViewGuide, "What this view means")}</div>
       <div class="calculation-builder" id="calculation-builder" hidden>
         <div class="builder-heading"><strong>Calculation recipe</strong><span>Uses existing fields</span></div>
         <div class="form-group"><label>Operation</label><select class="form-control" name="operation">
-          <option value="sum">Sum selected fields</option><option value="average">Average selected fields</option>
-          <option value="maximum">Best single field</option><option value="best_n">Best N (sum)</option>
-          <option value="drop_lowest">Drop lowest (sum)</option><option value="multiply">Multiply one field</option>
-          <option value="scale">Convert mark from one maximum to another</option><option value="weighted_sum">Weighted combination</option>
-          <option value="subtract">Subtract later fields from the first</option>
+          <option value="sum" ${calculation.operation === "sum" ? "selected" : ""}>Sum selected fields</option><option value="average" ${calculation.operation === "average" ? "selected" : ""}>Average selected fields</option>
+          <option value="maximum" ${calculation.operation === "maximum" ? "selected" : ""}>Best single field</option><option value="best_n" ${calculation.operation === "best_n" ? "selected" : ""}>Best N (sum)</option>
+          <option value="drop_lowest" ${calculation.operation === "drop_lowest" ? "selected" : ""}>Drop lowest (sum)</option><option value="multiply" ${calculation.operation === "multiply" ? "selected" : ""}>Multiply one field</option>
+          <option value="scale" ${calculation.operation === "scale" ? "selected" : ""}>Convert mark from one maximum to another</option><option value="weighted_sum" ${calculation.operation === "weighted_sum" ? "selected" : ""}>Weighted combination</option>
+          <option value="subtract" ${calculation.operation === "subtract" ? "selected" : ""}>Subtract later fields from the first</option>
         </select></div>
         <div class="source-field-list">
           ${
             sourceFields.length
-              ? sourceFields.map((field) => `<label class="source-field"><input type="checkbox" name="source_field" value="${field.id}" /><span><strong>${escapeHtml(field.label)}</strong><small>${field.max_mark ? `out of ${formatNumber(field.max_mark)}` : field.term}</small></span></label>`).join("")
+              ? sourceFields.map((source) => `<label class="source-field"><input type="checkbox" name="source_field" value="${source.id}" ${calculation.sourceIds.includes(source.id) ? "checked" : ""} /><span><strong>${escapeHtml(source.label)}</strong><small>${source.max_mark ? `out of ${formatNumber(source.max_mark)}` : source.term}</small></span></label>`).join("")
               : `<p class="builder-empty">Add at least one raw assessment before creating a calculation.</p>`
           }
         </div>
         <div class="inline-fields calculation-parameters">
-          <div class="form-group" data-param="count"><label>N / number to drop</label><input class="form-control" name="count" type="number" min="1" step="1" value="1" /></div>
-          <div class="form-group" data-param="factor"><label>Multiplier</label><input class="form-control" name="factor" type="number" min="0" step="0.01" value="2" /></div>
-          <div class="form-group" data-param="from"><label>Convert from</label><input class="form-control" name="from" type="number" min="0.01" step="0.01" value="100" /></div>
-          <div class="form-group" data-param="to"><label>Convert to</label><input class="form-control" name="to" type="number" min="0.01" step="0.01" value="40" /></div>
-          <div class="form-group full" data-param="weights"><label>Weights in selected-field order</label><input class="form-control" name="weights" placeholder="0.4, 0.6" /><small class="field-help">Use decimals such as 0.4 and 0.6, or percentages such as 40 and 60.</small></div>
+          <div class="form-group" data-param="count"><label>N / number to drop</label><input class="form-control" name="count" type="number" min="1" step="1" value="${calculation.count}" /></div>
+          <div class="form-group" data-param="factor"><label>Multiplier</label><input class="form-control" name="factor" type="number" min="0" step="0.01" value="${calculation.factor}" /></div>
+          <div class="form-group" data-param="from"><label>Convert from</label><input class="form-control" name="from" type="number" min="0.01" step="0.01" value="${calculation.from}" /></div>
+          <div class="form-group" data-param="to"><label>Convert to</label><input class="form-control" name="to" type="number" min="0.01" step="0.01" value="${calculation.to}" /></div>
+          <div class="form-group full" data-param="weights"><label>Weights in selected-field order</label><input class="form-control" name="weights" value="${escapeHtml(calculation.weights)}" placeholder="0.4, 0.6" /><small class="field-help">Use decimals such as 0.4 and 0.6, or percentages such as 40 and 60.</small></div>
         </div>
       </div>
-      <label style="display:flex;gap:8px;align-items:center;font-size:11px"><input type="checkbox" name="is_final" /> This is the final result for its term</label>
-      <div class="modal-actions"><button type="button" class="button" data-close-modal>Cancel</button><button type="submit" class="button primary">Add field</button></div>
+      <label style="display:flex;gap:8px;align-items:center;font-size:11px"><input type="checkbox" name="is_final" ${field?.is_final ? "checked" : ""} /> This is the final result for its term</label>
+      ${field ? `<label style="display:flex;gap:8px;align-items:center;font-size:11px"><input type="checkbox" name="archived" ${field.archived ? "checked" : ""} /> Archive this field from normal gradebook views</label>` : ""}
+      <div class="modal-actions"><button type="button" class="button" data-close-modal>Cancel</button><button type="submit" class="button primary">${field ? "Save field" : "Add field"}</button></div>
     </form>`);
   const fieldForm = box.querySelector("#field-form");
   const fieldType = fieldForm.elements.type;
@@ -901,7 +1181,8 @@ function openFieldModal() {
     fieldForm.elements.maximum.disabled = textual;
     fieldForm.elements.contribution.disabled = textual;
     box.querySelector("#assessment-type-guide").innerHTML = guideCardMarkup(
-      assessmentTypeGuide(fieldType.value)
+      assessmentTypeGuide(fieldType.value),
+      "What this type does"
     );
     const op = operation.value;
     box.querySelectorAll("[data-param]").forEach((element) => {
@@ -919,7 +1200,8 @@ function openFieldModal() {
   const syncViewGuide = () => {
     const selectedView = views.find((view) => view.id === Number(viewSelect.value));
     box.querySelector("#gradebook-view-guide").innerHTML = guideCardMarkup(
-      gradebookViewGuide(selectedView?.name, selectedView?.term)
+      gradebookViewGuide(selectedView?.name, selectedView?.term),
+      "What this view means"
     );
   };
   fieldType.addEventListener("change", syncBuilder);
@@ -968,7 +1250,7 @@ function openFieldModal() {
         }
         ruleJson = JSON.stringify(rule);
       }
-      await call("create_assessment_field", {
+      const payload = {
         courseId: Number(state.courseId),
         viewId: data.get("view") ? Number(data.get("view")) : null,
         stableKey: data.get("key"),
@@ -979,9 +1261,26 @@ function openFieldModal() {
         contribution: data.get("contribution") ? Number(data.get("contribution")) : null,
         ruleJson,
         isFinal: data.get("is_final") === "on"
-      });
+      };
+      if (field) {
+        await call("update_assessment_field", {
+          id: field.id,
+          viewId: payload.viewId,
+          stableKey: payload.stableKey,
+          label: payload.label,
+          term: payload.term,
+          fieldType: payload.fieldType,
+          maxMark: payload.maxMark,
+          contribution: payload.contribution,
+          ruleJson: payload.ruleJson,
+          isFinal: payload.isFinal,
+          archived: data.get("archived") === "on"
+        });
+      } else {
+        await call("create_assessment_field", payload);
+      }
       box.remove();
-      toast("Assessment field added.", "success");
+      toast(field ? "Assessment field updated." : "Assessment field added.", "success");
       await loadRoute();
     } catch (error) {
       toast(errorMessage(error), "error");
@@ -1114,24 +1413,37 @@ async function importRosterFromWorkbook() {
   });
 }
 
-function openAttendanceModal() {
+function openAttendanceModal(sessionId = null) {
+  const existing = (state.attendance?.sessions ?? []).find(
+    (session) => session.id === Number(sessionId)
+  );
   const today = new Date().toISOString().slice(0, 10);
   const box = modal(`
-    <h3>Create attendance session</h3><p>Every active student begins as Present. Record only the exceptions.</p>
-    <form id="attendance-form"><div class="inline-fields"><div class="form-group"><label>Date</label><input class="form-control" name="held_on" type="date" value="${today}" required /></div><div class="form-group"><label>Title</label><input class="form-control" name="title" value="Class" required /></div></div><div class="form-group"><label>Session note</label><textarea class="form-control" name="note"></textarea></div><div class="modal-actions"><button type="button" class="button" data-close-modal>Cancel</button><button type="submit" class="button primary">Create with all Present</button></div></form>`);
+    <h3>${existing ? "Edit attendance session" : "Create attendance session"}</h3><p>${existing ? "Update the date, title, or note without changing any saved attendance statuses." : "Every active student begins as Present. Record only the exceptions."}</p>
+    <form id="attendance-form"><div class="inline-fields"><div class="form-group"><label>Date</label><input class="form-control" name="held_on" type="date" value="${escapeHtml(existing?.held_on ?? today)}" required /></div><div class="form-group"><label>Title</label><input class="form-control" name="title" value="${escapeHtml(existing?.title ?? "Class")}" required /></div></div><div class="form-group"><label>Session note</label><textarea class="form-control" name="note">${escapeHtml(existing?.note ?? "")}</textarea></div><div class="modal-actions"><button type="button" class="button" data-close-modal>Cancel</button><button type="submit" class="button primary">${existing ? "Save session" : "Create with all Present"}</button></div></form>`);
   box.querySelector("#attendance-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     try {
-      const session = await call("create_attendance_session", {
-        sectionId: Number(state.sectionId),
-        heldOn: data.get("held_on"),
-        title: data.get("title"),
-        note: data.get("note") || null
-      });
+      const session = existing
+        ? await call("update_attendance_session", {
+            id: existing.id,
+            heldOn: data.get("held_on"),
+            title: data.get("title"),
+            note: data.get("note") || null
+          })
+        : await call("create_attendance_session", {
+            sectionId: Number(state.sectionId),
+            heldOn: data.get("held_on"),
+            title: data.get("title"),
+            note: data.get("note") || null
+          });
       state.activeAttendanceId = session.id;
       box.remove();
-      toast(`${session.present} students marked Present.`, "success");
+      toast(
+        existing ? "Attendance session updated." : `${session.present} students marked Present.`,
+        "success"
+      );
       await loadRoute();
     } catch (error) {
       toast(errorMessage(error), "error");
@@ -1281,7 +1593,10 @@ function selectNextStudent(preferUnmarked = false) {
   state.quickStudentId = next.enrollment_id;
   state.quickQuery = "";
   render();
-  setTimeout(() => document.querySelector("#student-search")?.focus(), 0);
+  setTimeout(() => {
+    document.querySelector("#student-search")?.focus();
+    document.querySelector(".student-result.active")?.scrollIntoView({ block: "nearest" });
+  }, 0);
 }
 
 async function changeContext(kind, value) {
@@ -1359,23 +1674,35 @@ async function exportWorkbook() {
   }
 }
 
-async function backup(action) {
+async function transferDatabase(action) {
   try {
-    if (action === "save") {
+    if (action === "export") {
       const date = new Date().toISOString().slice(0, 10);
-      const path = await chooseSaveFile(`gradia-backup-${date}.gradia`, [
-        { name: "Gradia backup", extensions: ["gradia"] }
+      const path = await chooseSaveFile(`gradia-database-${date}.gradia`, [
+        { name: "Gradia database transfer", extensions: ["gradia"] }
       ]);
       if (!path) return;
       await call("export_backup", { outputPath: path });
-      toast("Gradia backup saved and checksummed.", "success");
+      toast("Database exported to a verified .gradia transfer file.", "success");
     } else {
-      const path = await chooseOpenFile([{ name: "Gradia backup", extensions: ["gradia"] }]);
+      const path = await chooseOpenFile([
+        { name: "Gradia database transfer", extensions: ["gradia"] }
+      ]);
       if (!path) return;
-      if (!window.confirm("Restore this backup? Current local data will be replaced after validation.")) return;
+      if (
+        !window.confirm(
+          "Import this Gradia database? After validation, all current local Gradia data on this device will be replaced. Export the current database first if you need to keep it."
+        )
+      )
+        return;
       await call("import_backup", { backupPath: path });
       await refreshBootstrap({ preserve: false });
-      toast("Backup restored and verified.", "success");
+      state.gradebook = null;
+      state.dashboard = null;
+      state.analytics = null;
+      state.attendance = null;
+      state.pipeline = null;
+      toast("Database imported, verified, and loaded.", "success");
       await loadRoute();
     }
   } catch (error) {
@@ -1480,6 +1807,15 @@ app.addEventListener("click", async (event) => {
     return;
   }
   if (["add-field", "add-field-card"].includes(button.id)) openFieldModal();
+  if (button.dataset.editField) openFieldModal(Number(button.dataset.editField));
+  if (button.id === "edit-semester") openContextEditor("semester");
+  if (button.id === "edit-course") openContextEditor("course");
+  if (button.id === "edit-section") openContextEditor("section");
+  if (button.id === "edit-student") openStudentEditor();
+  if (button.id === "manage-gradebook-views") openGradebookViewEditor();
+  if (button.id === "delete-semester") await openDeleteModal("semester");
+  if (button.id === "delete-course") await openDeleteModal("course");
+  if (button.id === "delete-section") await openDeleteModal("section");
   if (button.id === "new-policy" || button.dataset.policy) {
     try {
       await openPolicyModal(button.dataset.policy ? Number(button.dataset.policy) : null);
@@ -1495,6 +1831,9 @@ app.addEventListener("click", async (event) => {
     }
   }
   if (["new-attendance", "new-attendance-empty"].includes(button.id)) openAttendanceModal();
+  if (button.id === "edit-attendance-session") {
+    openAttendanceModal(Number(state.activeAttendanceId));
+  }
   if (button.id === "next-student") selectNextStudent(false);
   if (button.id === "global-search") {
     state.route = "quick";
@@ -1504,8 +1843,8 @@ app.addEventListener("click", async (event) => {
   if (button.id === "choose-template" || button.id === "change-template") await selectTemplate();
   if (button.id === "preview-export") await previewExport();
   if (button.id === "export-workbook") await exportWorkbook();
-  if (button.id === "save-backup") await backup("save");
-  if (button.id === "restore-backup") await backup("restore");
+  if (button.id === "export-database") await transferDatabase("export");
+  if (button.id === "import-database") await transferDatabase("import");
   if (button.id === "open-welcome") {
     state.showWelcome = true;
     render();

@@ -79,3 +79,22 @@ jobs:
           prerelease: false
           retryAttempts: 2
           args: ${{ matrix.args }}
+
+      - name: Build unbundled Windows standalone executable
+        if: matrix.platform == 'windows-latest'
+        run: npm run tauri build -- --no-bundle
+
+      - name: Upload Windows standalone executable
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $version = node -p "require('./package.json').version"
+          $source = "src-tauri/target/release/gradia.exe"
+          $asset = Join-Path $env:RUNNER_TEMP "Gradia_${version}_windows_x64_standalone.exe"
+          if (-not (Test-Path -LiteralPath $source)) {
+            throw "Standalone executable was not produced at $source"
+          }
+          Copy-Item -LiteralPath $source -Destination $asset
+          gh release upload "v$version" $asset --repo "${{ github.repository }}" --clobber

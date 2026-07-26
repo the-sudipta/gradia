@@ -47,14 +47,26 @@ export function rankStudents(students, query) {
     .map(({ student }) => student);
 }
 
-export function studentWindow(students, selectedEnrollmentId, size = 12) {
-  if (!students.length) return [];
+export function studentWindowDetails(students, selectedEnrollmentId, size = 12) {
+  if (!students.length) {
+    return { students: [], start: 0, end: 0, total: 0 };
+  }
   const windowSize = Math.max(1, Math.floor(Number(size)) || 12);
   const selectedIndex = students.findIndex(
     (student) => student.enrollment_id === Number(selectedEnrollmentId)
   );
   const start = selectedIndex < 0 ? 0 : Math.floor(selectedIndex / windowSize) * windowSize;
-  return students.slice(start, start + windowSize);
+  const windowStudents = students.slice(start, start + windowSize);
+  return {
+    students: windowStudents,
+    start: start + 1,
+    end: start + windowStudents.length,
+    total: students.length
+  };
+}
+
+export function studentWindow(students, selectedEnrollmentId, size = 12) {
+  return studentWindowDetails(students, selectedEnrollmentId, size).students;
 }
 
 export const ASSESSMENT_TYPE_GUIDES = Object.freeze({

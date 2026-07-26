@@ -2,6 +2,45 @@
 
 All notable Gradia changes are documented here.
 
+## [0.2.1] — 2026-07-27
+
+### Fixed
+
+- The Windows release now includes a versioned standalone executable, closing the
+  distribution gap that left standalone users on the older v0.1.0 behavior.
+- Quick Entry exposes the active roster range and keeps the newly selected student
+  visible when Next student crosses positions 12→13, 24→25, and 36→37.
+- The active student row is brought into view after navigation.
+
+### Added
+
+- A visible version badge in the main sidebar so users can immediately confirm
+  which executable is running.
+- Explicit “What this type does” and “What this view means” labels above the
+  dynamic assessment and gradebook-view explanations.
+- Settings now presents complete-database movement as Export database and Import
+  database using a validated `.gradia` transfer file.
+- Database transfers record the creating Gradia version and enforce the `.gradia`
+  extension.
+- Complete edit paths for semesters, courses and accent colors, sections,
+  students and enrollment order/status, gradebook views, assessment/calculation
+  fields, grading policies, and attendance-session metadata.
+- Permanent semester, course, and section deletion with a cascade-impact preview
+  and exact typed confirmation.
+
+### Security and validation
+
+- Import verifies the Gradia format, embedded SHA-256 digest, SQLite integrity,
+  and migrations before replacing the current local database.
+- The UI accurately states that `.gradia` transfer files are integrity-protected
+  but are not password encrypted.
+- Structural edits capture old/new audit values. Deletion records its impact and
+  safely activates another semester when the active semester is removed.
+- Lowering an assessment maximum is rejected when existing recorded marks exceed
+  the proposed maximum.
+- Regression coverage uses the reported 40-student roster and tests all 12-record
+  boundaries through the final positions.
+
 ## [0.2.0] — 2026-07-26
 
 ### Added
@@ -76,3 +115,4 @@ All notable Gradia changes are documented here.
 
 [0.1.0]: https://github.com/the-sudipta/gradia/releases/tag/v0.1.0
 [0.2.0]: https://github.com/the-sudipta/gradia/releases/tag/v0.2.0
+[0.2.1]: https://github.com/the-sudipta/gradia/releases/tag/v0.2.1

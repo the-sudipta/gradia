@@ -14,6 +14,8 @@ pub struct BackupManifest {
     pub format: String,
     pub version: u32,
     pub product: String,
+    #[serde(default)]
+    pub app_version: Option<String>,
     pub created_at: String,
     pub database_sha256: String,
 }
@@ -22,7 +24,20 @@ fn hash(bytes: &[u8]) -> String {
     hex::encode(Sha256::digest(bytes))
 }
 
+fn validate_gradia_extension(path: &Path) -> Result<(), String> {
+    let valid = path
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .is_some_and(|extension| extension.eq_ignore_ascii_case("gradia"));
+    if valid {
+        Ok(())
+    } else {
+        Err("Gradia database transfers must use the .gradia file extension.".into())
+    }
+}
+
 pub fn create_backup(database_path: &Path, output_path: &Path) -> Result<BackupManifest, String> {
+    validate_gradia_extension(output_path)?;
     if !database_path.exists() {
         return Err("Gradia database does not exist yet.".into());
     }
@@ -36,6 +51,7 @@ pub fn create_backup(database_path: &Path, output_path: &Path) -> Result<BackupM
         format: "gradia-backup".into(),
         version: 1,
         product: "Gradia".into(),
+        app_version: Some(env!("CARGO_PKG_VERSION").into()),
         created_at: Utc::now().to_rfc3339(),
         database_sha256: hash(&database),
     };
@@ -64,6 +80,7 @@ pub fn create_backup(database_path: &Path, output_path: &Path) -> Result<BackupM
 }
 
 fn read_backup(path: &Path) -> Result<(BackupManifest, Vec<u8>), String> {
+    validate_gradia_extension(path)?;
     let file = File::open(path).map_err(|e| format!("Unable to open backup: {e}"))?;
     let mut archive = ZipArchive::new(file).map_err(|e| format!("Invalid Gradia backup: {e}"))?;
     let manifest: BackupManifest = {
@@ -171,5 +188,42 @@ mod tests {
             )
             .unwrap();
         assert_eq!(count, 1);
+    }
+
+    #[test]
+    fn transfer_rejects_wrong_extension_and_tampered_database() {
+        let directory = tempdir().unwrap();
+        let source = directory.path().join("gradia.db");
+        let wrong_extension = directory.path().join("transfer.zip");
+        let transfer = directory.path().join("transfer.gradia");
+        let restored = directory.path().join("restored.db");
+        db::open(&source).unwrap();
+
+        assert!(create_backup(&source, &wrong_extension)
+            .unwrap_err()
+            .contains(".gradia"));
+
+        let manifest = BackupManifest {
+            format: "gradia-backup".into(),
+            version: 1,
+            product: "Gradia".into(),
+            app_version: Some(env!("CARGO_PKG_VERSION").into()),
+            created_at: Utc::now().to_rfc3339(),
+            database_sha256: hash(b"expected database"),
+        };
+        let file = File::create(&transfer).unwrap();
+        let mut writer = ZipWriter::new(file);
+        let options = SimpleFileOptions::default().compression_method(CompressionMethod::Deflated);
+        writer.start_file("manifest.json", options).unwrap();
+        writer
+            .write_all(serde_json::to_string(&manifest).unwrap().as_bytes())
+            .unwrap();
+        writer.start_file("gradia.db", options).unwrap();
+        writer.write_all(b"not a database").unwrap();
+        writer.finish().unwrap();
+
+        let error = restore_backup(&restored, &transfer).unwrap_err();
+        assert!(error.contains("checksum"));
+        assert!(!restored.exists());
     }
 }
