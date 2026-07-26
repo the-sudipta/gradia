@@ -162,6 +162,67 @@ export function gradebookViewGuide(name = "", term = "") {
   );
 }
 
+export const CALCULATION_OPERATION_GUIDES = Object.freeze({
+  sum: {
+    label: "Sum selected fields",
+    behavior:
+      "Adds every selected source mark. If any selected mark is missing, the calculated result stays missing.",
+    example: "OBE 8 + Viva 17 + Written Exam 40 = Midterm Total 65."
+  },
+  average: {
+    label: "Average selected fields",
+    behavior:
+      "Adds the selected marks and divides by the number of selected fields. If any selected mark is missing, the result stays missing.",
+    example: "Quiz marks 8, 7, and 9 produce an average of 8."
+  },
+  maximum: {
+    label: "Best single field",
+    behavior:
+      "Returns the highest mark among the selected fields. If any selected mark is missing, the result stays missing.",
+    example: "Quiz marks 6, 9, and 7 produce a best-single result of 9."
+  },
+  best_n: {
+    label: "Best N (sum)",
+    behavior:
+      "Keeps the highest N available marks and adds them. Enter N, then select at least that many source fields; missing marks are never treated as zero.",
+    example: "Best 3 of quiz marks 6, 9, 7, and 8 = 9 + 8 + 7 = 24."
+  },
+  drop_lowest: {
+    label: "Drop lowest (sum)",
+    behavior:
+      "Removes the chosen number of lowest available marks and adds the rest. Enter how many to drop; missing marks are never converted to zero.",
+    example: "Dropping the lowest 1 from 6, 9, 7, and 8 gives 9 + 8 + 7 = 24."
+  },
+  multiply: {
+    label: "Multiply one field",
+    behavior:
+      "Multiplies exactly one selected source mark by the entered factor. A missing source produces a missing result.",
+    example: "A quiz mark of 8 multiplied by 2 becomes 16."
+  },
+  scale: {
+    label: "Convert mark from one maximum to another",
+    behavior:
+      "Preserves the achieved percentage while converting one mark from its original maximum to a new maximum.",
+    example: "75 out of 100 converted to a maximum of 40 becomes 30 out of 40."
+  },
+  weighted_sum: {
+    label: "Weighted combination",
+    behavior:
+      "Multiplies each selected field by its matching weight and adds the results. Enter weights in the same order as the selected fields; any missing input keeps the result missing.",
+    example: "Midterm 70 × 40% + Final 80 × 60% = 76."
+  },
+  subtract: {
+    label: "Subtract later fields from the first",
+    behavior:
+      "Starts with the first selected field, then subtracts every later selected field in order. Any missing input keeps the result missing.",
+    example: "Project 50 − Late Penalty 3 − Other Penalty 2 = Adjusted Project 45."
+  }
+});
+
+export function calculationOperationGuide(operation) {
+  return CALCULATION_OPERATION_GUIDES[operation] ?? CALCULATION_OPERATION_GUIDES.sum;
+}
+
 export function entryKey(enrollmentId, fieldId) {
   return `${enrollmentId}:${fieldId}`;
 }

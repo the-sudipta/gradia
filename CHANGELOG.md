@@ -2,6 +2,21 @@
 
 All notable Gradia changes are documented here.
 
+## [0.2.2] — 2026-07-27
+
+### Added
+
+- Every calculation operation now presents a live “What this operation does”
+  card with a plain-language explanation and concrete numerical example.
+- Guidance covers sum, average, best single, best N, drop lowest, multiplication,
+  maximum conversion, weighted combinations, and ordered subtraction.
+- The same dynamic guidance is available when creating or editing a calculated
+  assessment field.
+
+### Validation
+
+- Frontend guidance coverage now verifies all nine calculation operations.
+
 ## [0.2.1] — 2026-07-27
 
 ### Fixed
@@ -115,4 +130,5 @@ All notable Gradia changes are documented here.
 
 [0.1.0]: https://github.com/the-sudipta/gradia/releases/tag/v0.1.0
 [0.2.0]: https://github.com/the-sudipta/gradia/releases/tag/v0.2.0
+[0.2.2]: https://github.com/the-sudipta/gradia/releases/tag/v0.2.2
 [0.2.1]: https://github.com/the-sudipta/gradia/releases/tag/v0.2.1

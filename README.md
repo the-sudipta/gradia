@@ -20,7 +20,7 @@
     <img alt="JavaScript" src="https://img.shields.io/badge/JavaScript-ES_modules-F7DF1E?logo=javascript&logoColor=111111">
     <img alt="No account required" src="https://img.shields.io/badge/account-not_required-34D399">
     <img alt="No telemetry" src="https://img.shields.io/badge/telemetry-none-60A5FA">
-    <img alt="Version 0.2.1" src="https://img.shields.io/badge/version-0.2.1-A78BFA">
+    <img alt="Version 0.2.2" src="https://img.shields.io/badge/version-0.2.2-A78BFA">
   </p>
 
   <p>
@@ -187,6 +187,33 @@ The **Type** tells Gradia what kind of value a column stores and how it behaves.
   </tbody>
 </table>
 
+## Calculation operations
+
+When **Type = Calculated**, the operation defines how existing fields produce the
+new read-only result. Gradia shows a live explanation and numerical example for
+the selected operation in both the Add and Edit assessment dialogs.
+
+<table width="100%">
+  <thead>
+    <tr>
+      <th width="24%" align="left">Operation</th>
+      <th width="46%" align="left">Meaning</th>
+      <th width="30%" align="left">Example</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>Sum selected fields</strong></td><td>Adds every selected mark; any missing input keeps the result missing.</td><td>8 + 17 + 40 = 65</td></tr>
+    <tr><td><strong>Average selected fields</strong></td><td>Adds the selected marks and divides by their count.</td><td>Average of 8, 7, 9 = 8</td></tr>
+    <tr><td><strong>Best single field</strong></td><td>Returns the highest selected mark.</td><td>Best of 6, 9, 7 = 9</td></tr>
+    <tr><td><strong>Best N (sum)</strong></td><td>Keeps and adds the highest N available marks; missing marks are not zero.</td><td>Best 3 of 6, 9, 7, 8 = 24</td></tr>
+    <tr><td><strong>Drop lowest (sum)</strong></td><td>Removes the requested number of lowest available marks and adds the rest.</td><td>Drop lowest 1 from 6, 9, 7, 8 = 24</td></tr>
+    <tr><td><strong>Multiply one field</strong></td><td>Multiplies exactly one selected field by the entered factor.</td><td>8 × 2 = 16</td></tr>
+    <tr><td><strong>Convert maximum</strong></td><td>Preserves the achieved percentage while changing the mark’s maximum.</td><td>75/100 → 30/40</td></tr>
+    <tr><td><strong>Weighted combination</strong></td><td>Multiplies each selected field by its matching weight and adds the results.</td><td>70 × 40% + 80 × 60% = 76</td></tr>
+    <tr><td><strong>Subtract later fields</strong></td><td>Starts with the first field and subtracts every later field in selection order.</td><td>50 − 3 − 2 = 45</td></tr>
+  </tbody>
+</table>
+
 ## Gradebook views
 
 **Term** answers “when does this assessment belong?” while **Gradebook view** answers “with which group of columns should it be organized?” A view does not change a mark or formula. The Add assessment dialog explains the selected view in the same way as the field type.
@@ -239,7 +266,7 @@ The **Type** tells Gradia what kind of value a column stores and how it behaves.
   </tbody>
 </table>
 
-Version 0.2.1 packages are built natively on GitHub-hosted Windows, macOS, and Ubuntu runners. The Windows standalone executable still requires the Microsoft Edge WebView2 runtime included with supported Windows 10/11 systems. Packages are not commercially code-signed or Apple-notarized yet; Windows/macOS may therefore show an unfamiliar-developer warning. Verify the published SHA-256 checksums before opening a download.
+Version 0.2.2 packages are built natively on GitHub-hosted Windows, macOS, and Ubuntu runners. The Windows standalone executable still requires the Microsoft Edge WebView2 runtime included with supported Windows 10/11 systems. Packages are not commercially code-signed or Apple-notarized yet; Windows/macOS may therefore show an unfamiliar-developer warning. Verify the published SHA-256 checksums before opening a download.
 
 ## Quick start
 
@@ -323,7 +350,7 @@ The implementation gates and verified baseline are documented in [GRADIA_RUNBOOK
 
 ## Project status
 
-Version `0.2.1` delivers the complete core teacher workflow on Windows, macOS, and Linux: setup, roster management, flexible marks, focused entry, attendance, grading policies, calculation rules, analytics, pipeline tracking, Excel export, audit snapshots, and verified `.gradia` database transfer. Advanced cross-semester analytics, bulk undo tooling, password-encrypted transfers, and commercially signed/notarized distribution remain on the [roadmap](ROADMAP.md).
+Version `0.2.2` delivers the complete core teacher workflow on Windows, macOS, and Linux: setup, roster management, flexible marks, focused entry, attendance, grading policies, calculation rules with live explanations and numerical examples, analytics, pipeline tracking, Excel export, audit snapshots, and verified `.gradia` database transfer. Advanced cross-semester analytics, bulk undo tooling, password-encrypted transfers, and commercially signed/notarized distribution remain on the [roadmap](ROADMAP.md).
 
 ## Research and industrial PhD collaboration
 

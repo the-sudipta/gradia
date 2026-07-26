@@ -11,7 +11,7 @@ authors:
   - family-names: "Kumar"
     given-names: "Sudipta"
     alias: "the-sudipta"
-version: 0.2.1
+version: 0.2.2
 date-released: 2026-07-27
 license: "LicenseRef-Gradia-Source-Available-1.0"
 repository-code: "https://github.com/the-sudipta/gradia"
@@ -33,5 +33,5 @@ preferred-citation:
       given-names: "Sudipta"
       alias: "the-sudipta"
   year: 2026
-  version: 0.2.1
+  version: 0.2.2
   url: "https://github.com/the-sudipta/gradia"

@@ -4,6 +4,7 @@ import gradiaLogoUrl from "./assets/gradia-logo-transparent.png";
 import packageMetadata from "../package.json";
 import {
   assessmentTypeGuide,
+  calculationOperationGuide,
   entryKey,
   escapeHtml,
   formatNumber,
@@ -1132,6 +1133,7 @@ function openFieldModal(fieldId = null) {
   const initialTypeGuide = assessmentTypeGuide(field?.field_type ?? "score");
   const selectedView = views.find((view) => view.id === Number(field?.view_id));
   const initialViewGuide = gradebookViewGuide(selectedView?.name, selectedView?.term);
+  const initialOperationGuide = calculationOperationGuide(calculation.operation);
   const box = modal(`
     <h3>${field ? "Edit assessment field" : "Add assessment field"}</h3><p>${field ? "Update this field without deleting its existing student entries." : "Create a validated raw column or a reusable calculation."} Missing source marks remain missing.</p>
     <form id="field-form">
@@ -1150,6 +1152,7 @@ function openFieldModal(fieldId = null) {
           <option value="scale" ${calculation.operation === "scale" ? "selected" : ""}>Convert mark from one maximum to another</option><option value="weighted_sum" ${calculation.operation === "weighted_sum" ? "selected" : ""}>Weighted combination</option>
           <option value="subtract" ${calculation.operation === "subtract" ? "selected" : ""}>Subtract later fields from the first</option>
         </select></div>
+        <div class="guide-card operation" id="calculation-operation-guide" aria-live="polite">${guideCardMarkup(initialOperationGuide, "What this operation does")}</div>
         <div class="source-field-list">
           ${
             sourceFields.length
@@ -1185,6 +1188,10 @@ function openFieldModal(fieldId = null) {
       "What this type does"
     );
     const op = operation.value;
+    box.querySelector("#calculation-operation-guide").innerHTML = guideCardMarkup(
+      calculationOperationGuide(op),
+      "What this operation does"
+    );
     box.querySelectorAll("[data-param]").forEach((element) => {
       const parameter = element.dataset.param;
       element.hidden =

@@ -4,7 +4,7 @@
 
 **Product name:** Gradia
 
-**Status:** Version 0.2.1 release candidate implemented and locally verified; native GitHub publication pending.
+**Status:** Version 0.2.2 calculation-guidance release candidate implemented and locally verified; native GitHub publication pending.
 
 **Owner:** Master (AIUB CSE Instructor)
 
@@ -723,6 +723,67 @@ snapshots. Deleting an active semester activates another remaining semester.
 | Standalone launch | exact isolated executable launched and remained healthy; verification process then stopped |
 | Local standalone SHA-256 | `F8D533967DF0EAD77DFB0A5B3261826438B372D1F88DDBE56A532ECBEB2E42E6` |
 
-Cross-platform GitHub run IDs, final published asset names, and published hashes
-must be appended only after the draft release and independently downloaded
-standalone have been verified.
+### Published release evidence — 2026-07-27
+
+| Check | Observed result |
+|---|---|
+| Source commit | `d7e1fb62ecf5d314cb04c5024568db411d879d66` |
+| CI run | [30215291957](https://github.com/the-sudipta/gradia/actions/runs/30215291957), successful |
+| Native release run | [30215295679](https://github.com/the-sudipta/gradia/actions/runs/30215295679), successful; 4/4 native jobs |
+| Public release | [Gradia v0.2.1](https://github.com/the-sudipta/gradia/releases/tag/v0.2.1), published and marked latest |
+| macOS Apple Silicon | `.dmg` and `.app.tar.gz` published |
+| macOS Intel | `.dmg` and `.app.tar.gz` published |
+| Linux x64 | `.AppImage` and `.deb` published |
+| Windows x64 | NSIS `.exe`, MSI, and standalone `.exe` published |
+| Release checksum manifest | all 9 native assets independently downloaded and SHA-256 hashed |
+| Published standalone metadata | product/file version 0.2.1; PE subsystem 2 (Windows GUI, no console) |
+| Published standalone launch | downloaded release asset remained healthy for five seconds; only the verification PID was then stopped |
+| Published standalone SHA-256 | `0A3474B8B52B8AD95EC4D052F2E90C3B1D2F9483E2D3E664137FE26273CD23CA` |
+
+The authoritative published hashes are stored in
+`docs/RELEASE_CHECKSUMS.txt` and attached to the release as
+`RELEASE_CHECKSUMS.txt`. Version 0.2.0 remains available for audit history but
+its release notes direct users to the corrected v0.2.1 release.
+
+---
+
+## 18. Version 0.2.2 Calculation Guidance Record
+
+Every calculation operation in the assessment-field editor now has the same
+live explanation pattern as assessment types and gradebook views. The
+`What this operation does` card updates immediately when the operation changes
+and is shared by both add and edit workflows.
+
+The guide covers:
+
+- sum selected fields;
+- average selected fields;
+- best single field;
+- best N (sum);
+- drop lowest (sum);
+- multiply one field;
+- convert a mark from one maximum to another;
+- weighted combination;
+- subtract later fields from the first.
+
+Each entry documents missing-mark behavior and supplies a concrete numerical
+example. The descriptions match the actual Rust calculation engine, including
+best-N and dropped-lowest treatment of available marks.
+
+### Local verification evidence — 2026-07-27
+
+| Check | Observed result |
+|---|---|
+| Frontend unit tests | 9 passed, 0 failed |
+| Operation-guide fixture | all 9 operations contain a label, behavior explanation, and numerical example |
+| Add-field browser QA | all 9 operation selections updated the visible guide with no console warning/error |
+| Edit-field browser QA | existing calculated field opened with the matching operation guide |
+| Guidance layout | visible 648 × 92 px card inside the assessment modal at a 1600 × 1000 viewport |
+| Rust unit/integration tests | 12 passed, 0 failed |
+| Rust formatting | passed |
+| Clippy with warnings denied | passed |
+| Production web bundle | passed |
+
+Cross-platform GitHub run IDs, final published assets, checksums, and downloaded
+standalone verification must be appended only after v0.2.2 is built and
+independently verified.

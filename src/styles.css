@@ -1715,6 +1715,15 @@ textarea.form-control {
   background: var(--mint);
 }
 
+.guide-card.operation {
+  background: rgba(96, 165, 250, 0.045);
+  border-color: rgba(96, 165, 250, 0.15);
+}
+
+.guide-card.operation::before {
+  background: #60a5fa;
+}
+
 .guide-card strong {
   font-size: 11px;
 }
@@ -1729,6 +1738,10 @@ textarea.form-control {
 
 .guide-card.secondary .guide-eyebrow {
   color: var(--mint);
+}
+
+.guide-card.operation .guide-eyebrow {
+  color: #93c5fd;
 }
 
 .modal .guide-card p {

@@ -5,6 +5,7 @@ import { barChart } from "../../src/charts.js";
 import {
   assessmentTypeGuide,
   buildOutputFilename,
+  calculationOperationGuide,
   descriptiveStats,
   entryKey,
   gradebookViewGuide,
@@ -66,6 +67,28 @@ test("assessment types and gradebook views provide behavior and examples", () =>
   assert.equal(gradebookViewGuide("Midterm", "mid").label, "Midterm");
   assert.match(gradebookViewGuide("Attendance", "custom").behavior, /Attendance screen/);
   assert.match(gradebookViewGuide().behavior, /Term/);
+});
+
+test("calculation operations provide behavior and concrete examples", () => {
+  for (const operation of [
+    "sum",
+    "average",
+    "maximum",
+    "best_n",
+    "drop_lowest",
+    "multiply",
+    "scale",
+    "weighted_sum",
+    "subtract"
+  ]) {
+    const guide = calculationOperationGuide(operation);
+    assert.ok(guide.label);
+    assert.ok(guide.behavior.length > 50);
+    assert.ok(guide.example.length > 20);
+  }
+  assert.match(calculationOperationGuide("best_n").example, /Best 3/);
+  assert.match(calculationOperationGuide("weighted_sum").example, /40%/);
+  assert.equal(calculationOperationGuide("unknown").label, "Sum selected fields");
 });
 
 test("optimistic grade update changes local state before confirmation", () => {
