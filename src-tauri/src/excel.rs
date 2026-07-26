@@ -807,6 +807,17 @@ mod tests {
         let project = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../docs/project_info");
         let marks_template =
             project.join("INTRODUCTION TO PROGRAMMING LAB B Midterm for  Summer.xlsx");
+        let gradebook = project.join("DS Lab [ G ].xlsx");
+
+        // These user-supplied workbooks contain private institutional data and are
+        // deliberately excluded from the public repository. Validate them whenever
+        // they are present locally; public CI exercises the same package invariants
+        // with the synthetic fixture above.
+        if !marks_template.is_file() || !gradebook.is_file() {
+            eprintln!("Private institutional workbook fixtures are not available; skipping local-only preflight.");
+            return;
+        }
+
         let inspected = inspect_workbook(&marks_template, None).unwrap();
         assert_eq!(inspected.student_id_column, "A");
         assert_eq!(inspected.mark_column, "C");
@@ -818,7 +829,6 @@ mod tests {
         assert!(!roster_rows[0].student_identifier.is_empty());
         assert!(!roster_rows[0].name.is_empty());
 
-        let gradebook = project.join("DS Lab [ G ].xlsx");
         let gradebook_package = read_package(&gradebook).unwrap();
         let sheets = workbook_sheets(&gradebook_package).unwrap();
         assert_eq!(sheets.len(), 7);
