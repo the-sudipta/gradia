@@ -4,7 +4,7 @@
 
 **Product name:** Gradia
 
-**Status:** Version 0.2.2 calculation-guidance release candidate implemented and locally verified; native GitHub publication pending.
+**Status:** Version 0.2.2 published and independently verified across the complete native release matrix.
 
 **Owner:** Master (AIUB CSE Instructor)
 
@@ -784,6 +784,24 @@ best-N and dropped-lowest treatment of available marks.
 | Clippy with warnings denied | passed |
 | Production web bundle | passed |
 
-Cross-platform GitHub run IDs, final published assets, checksums, and downloaded
-standalone verification must be appended only after v0.2.2 is built and
-independently verified.
+### Published release evidence — 2026-07-27
+
+| Check | Observed result |
+|---|---|
+| Source commit | `6cdf5b3144533ce0359c2fdfa130364f07fc3ba2` |
+| CI run | [30216119409](https://github.com/the-sudipta/gradia/actions/runs/30216119409), successful |
+| Native release run | [30216121187](https://github.com/the-sudipta/gradia/actions/runs/30216121187), successful; 4/4 native jobs |
+| Public release | [Gradia v0.2.2](https://github.com/the-sudipta/gradia/releases/tag/v0.2.2), published and marked latest |
+| macOS Apple Silicon | `.dmg` and `.app.tar.gz` published |
+| macOS Intel | `.dmg` and `.app.tar.gz` published |
+| Linux x64 | `.AppImage` and `.deb` published |
+| Windows x64 | NSIS `.exe`, MSI, and standalone `.exe` published |
+| Release checksum manifest | all 9 native assets independently downloaded and SHA-256 hashed |
+| Published standalone metadata | product/file version 0.2.2; PE subsystem 2 (Windows GUI, no console) |
+| Published standalone launch | downloaded release asset remained healthy for five seconds; only the verification PID was then stopped |
+| Published standalone SHA-256 | `05840BDD11E5234AC37D2F184C9CA7C62E34258B2DCDFC46725DCDC0E2E672BB` |
+
+The authoritative v0.2.2 hashes are stored in
+`docs/RELEASE_CHECKSUMS.txt` and attached to the release as
+`RELEASE_CHECKSUMS.txt`. Version 0.2.1 remains available for audit history but
+its release notes direct users to v0.2.2.
