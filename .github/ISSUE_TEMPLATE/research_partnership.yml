@@ -1,0 +1,53 @@
+name: Research or pilot inquiry
+description: Start a public, non-confidential discussion about research collaboration.
+title: "[Research]: "
+labels: ["research", "partnership"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form only for non-confidential initial information. Move legal,
+        personal, funding, and institutional details to a private channel.
+
+  - type: input
+    id: organization
+    attributes:
+      label: Institution or organization
+    validations:
+      required: true
+
+  - type: dropdown
+    id: collaboration
+    attributes:
+      label: Collaboration type
+      options:
+        - Industrial PhD
+        - Doctoral scholarship or supervision
+        - Funded research project
+        - Institutional pilot
+        - Education-technology partnership
+        - Accessibility, privacy, or security study
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: fit
+    attributes:
+      label: Research or operational fit
+      description: Explain the problem, expertise, and expected mutual value.
+    validations:
+      required: true
+
+  - type: input
+    id: timeline
+    attributes:
+      label: Indicative timeline
+
+  - type: checkboxes
+    id: ethics
+    attributes:
+      label: Responsible collaboration
+      options:
+        - label: Any study involving people or student data will require appropriate ethics, consent, privacy, and institutional governance.
+          required: true

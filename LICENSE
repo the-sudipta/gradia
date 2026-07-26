@@ -1,0 +1,139 @@
+Gradia Source-Available Non-Commercial License 1.0
+GSANCL-1.0
+
+Copyright (c) 2026 Sudipta Kumar. All rights reserved.
+
+This is a source-available license, not an open-source license.
+
+1. DEFINITIONS
+
+"Licensor" means Sudipta Kumar, GitHub user the-sudipta.
+
+"Software" means the Gradia source code, binaries, database schema, documentation,
+artwork, user-interface assets, and other original materials distributed with this
+license.
+
+"Commercial Use" means use intended for or connected to commercial advantage,
+monetary compensation, revenue generation, fee-charging operations, or the internal
+operations of a for-profit organization. It includes sale, resale, licensing,
+sub-licensing, rental, paid hosting, software-as-a-service, commercial training,
+paid consultancy, bundling with a paid product or service, and use to provide a
+service for which money or another valuable benefit is received.
+
+"Non-Commercial Purpose" means personal learning, unpaid teaching, academic study,
+non-profit research, accessibility evaluation, security evaluation, or product
+evaluation that is not a Commercial Use.
+
+2. NON-COMMERCIAL LICENSE GRANT
+
+Subject to every condition in this license, the Licensor grants you a revocable,
+non-exclusive, non-transferable, worldwide, royalty-free copyright license to:
+
+a. view and study the source code;
+b. run the Software for a Non-Commercial Purpose;
+c. modify the Software for your own Non-Commercial Purpose; and
+d. redistribute source-code copies or modifications solely for a Non-Commercial
+   Purpose, provided that you preserve this license, all copyright and attribution
+   notices, clearly identify modifications, provide corresponding source code, and
+   impose no additional terms that conflict with this license.
+
+No patent, trademark, trade dress, publicity, or other rights are granted.
+
+3. COMMERCIAL USE IS PROHIBITED WITHOUT A SEPARATE AGREEMENT
+
+This license grants no right to make any Commercial Use of the Software. Before any
+Commercial Use, you must contact the Licensor and obtain a separate written
+commercial license signed by both parties.
+
+The commercial agreement must state the permitted deployment, duration, reporting
+requirements, and royalty or other payment. Unless the Licensor agrees otherwise in
+writing, the agreement will be executed as two identical physical originals signed
+by both parties, with one original retained by each party.
+
+No commercial permission begins through an inquiry, discussion, quotation, draft,
+verbal statement, repository access, download, fork, or contribution. It begins only
+when the separate agreement has been fully executed and all conditions required for
+commencement have been satisfied.
+
+If a payment is missed, commercial rights are suspended or terminated as specified
+in the separate commercial agreement. This public license supplies no fallback
+commercial right during a missed-payment period.
+
+See COMMERCIAL-LICENSING.md for the non-binding inquiry process.
+
+4. PROHIBITED CONDUCT
+
+You may not:
+
+a. use the Software for any Commercial Use without a separate executed agreement;
+b. remove or obscure legal, attribution, authorship, or provenance notices;
+c. represent the Software or a modified version as solely your original work;
+d. use Gradia names, logos, or branding to imply endorsement or affiliation;
+e. use the Software to violate law, facilitate academic fraud, discriminate
+   unlawfully, invade privacy, manipulate records without authority, or harm a
+   person or institution;
+f. publish real student data, marks, attendance, credentials, institutional
+   workbooks, or Gradia backups in a public repository or issue; or
+g. circumvent technical measures that protect data or application integrity.
+
+5. CONTRIBUTIONS
+
+Unless a separate written contribution agreement says otherwise, a contribution
+submitted for inclusion in Gradia grants the Licensor a perpetual, worldwide,
+non-exclusive, irrevocable, royalty-free copyright license to use, reproduce,
+modify, distribute, publicly display, publicly perform, sublicense, and commercially
+license that contribution. You retain copyright in your original contribution.
+
+6. OWNERSHIP AND INDEPENDENT DEVELOPMENT
+
+The Licensor retains all rights not expressly granted in the Software's original
+copyrightable expression, branding, and other protectable materials.
+
+This license does not claim ownership of abstract ideas, methods, general product
+features, facts, algorithms as such, or software independently created without
+copying protected Gradia material. Similar functionality alone does not establish
+copyright infringement. Patent, contract, trade-secret, trademark, database, and
+other rights—if any—are separate questions governed by applicable law and evidence.
+
+7. TERMINATION
+
+Your rights under this license terminate automatically when you breach it. You must
+then stop using and distributing the Software and delete distributed copies under
+your control, except where retention is required by law. The Licensor may reinstate
+rights in a signed writing. Sections concerning ownership, warranty, liability, and
+interpretation survive termination.
+
+8. NO WARRANTY
+
+THE SOFTWARE IS PROVIDED "AS IS" AND "AS AVAILABLE," WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE, TITLE, NON-INFRINGEMENT, ACCURACY, SECURITY, OR AVAILABILITY.
+YOU ARE RESPONSIBLE FOR VERIFYING MARKS, CALCULATIONS, EXPORTS, BACKUPS, LEGAL
+COMPLIANCE, AND FITNESS FOR YOUR INSTITUTION.
+
+9. LIMITATION OF LIABILITY
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE LICENSOR WILL NOT BE LIABLE
+FOR INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, CONSEQUENTIAL, OR PUNITIVE DAMAGES,
+OR FOR LOST DATA, LOST REVENUE, LOST PROFITS, ACADEMIC DECISIONS, OR INSTITUTIONAL
+CLAIMS ARISING FROM THE SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY.
+
+10. INTERPRETATION
+
+If any provision is unenforceable, it will be limited to the minimum extent
+necessary and the remaining provisions will continue. A failure to enforce a
+provision is not a waiver. This license is the complete public non-commercial grant;
+a signed commercial agreement may provide different terms only for its parties and
+scope.
+
+11. CONTACT
+
+Commercial and legal inquiries:
+https://github.com/the-sudipta
+
+Repository:
+https://github.com/the-sudipta/gradia
+
+IMPORTANT: This custom license is a project-owner draft and is not legal advice.
+The Licensor should obtain review from qualified intellectual-property counsel
+before relying on it for commercial contracting or enforcement.

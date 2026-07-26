@@ -1,0 +1,4 @@
+interface:
+  display_name: "GitHub Repository Manager"
+  short_description: "Build, audit, publish, and maintain repositories"
+  default_prompt: "Use $github-repository-manager to prepare and publish this project as a professional GitHub repository."

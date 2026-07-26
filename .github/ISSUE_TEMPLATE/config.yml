@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/the-sudipta/gradia/security/advisories/new
+    about: Report security issues privately. Never post student data.
+  - name: Commercial licensing
+    url: https://github.com/the-sudipta/gradia/blob/main/COMMERCIAL-LICENSING.md
+    about: Review the commercial inquiry process before contacting the owner.
+  - name: Research and industrial PhD collaboration
+    url: https://github.com/the-sudipta/gradia/blob/main/docs/INDUSTRIAL_PHD_PROSPECTUS.md
+    about: Read the research prospectus and collaboration request.

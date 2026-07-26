@@ -1,0 +1,50 @@
+name: Feature proposal
+description: Propose a teacher, analytics, interoperability, privacy, or research improvement.
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Teacher or institutional problem
+      description: Describe the real workflow problem without including private data.
+    validations:
+      required: true
+
+  - type: textarea
+    id: current
+    attributes:
+      label: Current workaround
+      description: How is this handled today in Gradia, Excel, paper, or another tool?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed experience
+      description: Describe what the teacher should be able to do and how success can be observed.
+    validations:
+      required: true
+
+  - type: textarea
+    id: edge_cases
+    attributes:
+      label: Edge cases and safety
+      description: Consider missing data, zero, duplicates, policy changes, privacy, audit, accessibility, and recovery.
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Validation idea
+      description: How could this be tested with synthetic data and reconciled evidence?
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Confirmation
+      options:
+        - label: This proposal contains no real student or institutional data.
+          required: true
+        - label: I understand that a proposal does not grant commercial-use rights.
+          required: true

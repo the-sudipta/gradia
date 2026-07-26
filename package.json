@@ -1,0 +1,23 @@
+{
+  "name": "gradia",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Gradia — Smarter academic assessment.",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 1420",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 1420",
+    "test": "node --test tests/frontend",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.8.0",
+    "@tauri-apps/plugin-dialog": "^2.4.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.8.0",
+    "jsdom": "^26.1.0",
+    "vite": "^6.1.0"
+  }
+}

@@ -1,0 +1,37 @@
+cff-version: 1.2.0
+message: "If Gradia supports your teaching, software, or research, please cite it using this metadata."
+type: software
+title: "Gradia: Smarter academic assessment"
+abstract: >-
+  Gradia is a private, local-first desktop application for flexible academic
+  gradebooks, attendance, institute-independent grading and calculations,
+  descriptive analytics, administrative progress, and fidelity-preserving
+  institutional Excel template export.
+authors:
+  - family-names: "Kumar"
+    given-names: "Sudipta"
+    alias: "the-sudipta"
+version: 0.1.0
+date-released: 2026-07-26
+license: "LicenseRef-Gradia-Source-Available-1.0"
+repository-code: "https://github.com/the-sudipta/gradia"
+url: "https://github.com/the-sudipta/gradia"
+keywords:
+  - academic assessment
+  - gradebook
+  - attendance
+  - learning analytics
+  - spreadsheet interoperability
+  - SQLite
+  - Tauri
+  - local-first software
+preferred-citation:
+  type: software
+  title: "Gradia: Smarter academic assessment"
+  authors:
+    - family-names: "Kumar"
+      given-names: "Sudipta"
+      alias: "the-sudipta"
+  year: 2026
+  version: 0.1.0
+  url: "https://github.com/the-sudipta/gradia"
